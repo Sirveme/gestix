@@ -2,7 +2,7 @@ from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, FileResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 from app.config import settings
@@ -67,9 +67,9 @@ app.include_router(inventario_router)
 app.include_router(contabilidad_router)
 
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("home.html", {"request": request})
+@app.get("/", response_class=FileResponse)
+async def home():
+    return FileResponse(str(BASE_DIR / "static" / "home" / "index.html"))
 
 
 @app.get("/ping")
