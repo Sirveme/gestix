@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Listas de Precio — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            {% if toast %}<div class="toast toast-{{ toast_tipo }}" id="toast">{{ toast }}</div>{% endif %}
+            <div class="page-header">
+                <a href="/config" class="page-back">← Configuración</a>
+                <h1>Listas de Precio</h1>
+            </div>
+
+            <!-- Listas existentes -->
+            <div class="table-wrap" style="margin-bottom:1.5rem">
+                <table class="data-table">
+                    <thead><tr><th>Nombre</th><th>Código</th><th>Monto mínimo</th><th>Default</th><th>Estado</th></tr></thead>
+                    <tbody>
+                        {% for l in listas %}
+                        <tr>
+                            <td><strong>{{ l.nombre }}</strong><br><small>{{ l.descripcion or '' }}</small></td>
+                            <td>{{ l.codigo or '—' }}</td>
+                            <td>{{ 'S/ ' ~ l.monto_minimo if l.monto_minimo else '—' }}</td>
+                            <td>{% if l.es_default %}<span class="badge badge-ok">Sí</span>{% endif %}</td>
+                            <td><span class="badge {% if l.activo %}badge-ok{% else %}badge-off{% endif %}">
+                                {% if l.activo %}Activa{% else %}Inactiva{% endif %}
+                            </span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="table-empty">No hay listas configuradas</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Nueva lista -->
+            <form hx-post="/config/listas-precio" hx-target="body" hx-swap="none"
+                  method="post" action="/config/listas-precio">
+                <div class="form-section">
+                    <h3 class="section-title">Nueva Lista de Precio</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Nombre</label>
+                            <input type="text" name="nombre" placeholder="Mayorista" required>
+                        </div>
+                        <div class="field">
+                            <label>Código</label>
+                            <input type="text" name="codigo" placeholder="MAY" maxlength="10">
+                        </div>
+                        <div class="field field-wide">
+                            <label>Descripción</label>
+                            <input type="text" name="descripcion" placeholder="Para clientes mayoristas con compra mínima">
+                        </div>
+                        <div class="field">
+                            <label>Monto mínimo (S/)</label>
+                            <input type="number" name="monto_minimo" step="0.01" placeholder="0.00">
+                        </div>
+                        <div class="field">
+                            <label>Orden</label>
+                            <input type="number" name="orden" value="{{ listas|length }}">
+                        </div>
+                        <div class="field">
+                            <div class="toggle-grid">
+                                <label class="toggle-label"><input type="checkbox" name="activo" checked><span>Activa</span></label>
+                                <label class="toggle-label"><input type="checkbox" name="es_default"><span>Lista por defecto</span></label>
+                                <label class="toggle-label"><input type="checkbox" name="requiere_aprobacion"><span>Requiere aprobación</span></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Agregar lista</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+<script>const toast=document.getElementById('toast');if(toast)setTimeout(()=>toast.style.opacity='0',3000);</script>
+{% endblock %}

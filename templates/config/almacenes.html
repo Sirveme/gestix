@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Almacenes — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            {% if toast %}<div class="toast toast-{{ toast_tipo }}" id="toast">{{ toast }}</div>{% endif %}
+            <div class="page-header">
+                <a href="/config" class="page-back">← Configuración</a>
+                <h1>Almacenes</h1>
+            </div>
+
+            <div class="table-wrap" style="margin-bottom:1.5rem">
+                <table class="data-table">
+                    <thead><tr><th>Código</th><th>Nombre</th><th>Tipo</th><th>Responsable</th><th>Stock</th><th>Estado</th></tr></thead>
+                    <tbody>
+                        {% for a in almacenes %}
+                        <tr>
+                            <td>{{ a.codigo or '—' }}</td>
+                            <td><strong>{{ a.nombre }}</strong></td>
+                            <td>{{ a.tipo }}</td>
+                            <td>{{ a.responsable or '—' }}</td>
+                            <td>{% if a.controla_stock %}<span class="badge badge-ok">Sí</span>{% else %}<span class="badge badge-off">No</span>{% endif %}</td>
+                            <td><span class="badge {% if a.activo %}badge-ok{% else %}badge-off{% endif %}">{% if a.activo %}Activo{% else %}Inactivo{% endif %}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="table-empty">No hay almacenes registrados</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <form hx-post="/config/almacenes" hx-target="body" hx-swap="none"
+                  method="post" action="/config/almacenes">
+                <div class="form-section">
+                    <h3 class="section-title">Nuevo Almacén</h3>
+                    <div class="form-grid">
+                        <div class="field"><label>Código</label><input type="text" name="codigo" maxlength="10" placeholder="ALM01"></div>
+                        <div class="field field-wide"><label>Nombre</label><input type="text" name="nombre" required placeholder="Almacén Principal"></div>
+                        <div class="field field-wide"><label>Dirección</label><input type="text" name="direccion"></div>
+                        <div class="field"><label>Tipo</label>
+                            <select name="tipo" class="field-select">
+                                <option value="principal">Principal</option>
+                                <option value="transito">Tránsito</option>
+                                <option value="consignacion">Consignación</option>
+                                <option value="produccion">Producción</option>
+                            </select>
+                        </div>
+                        <div class="field"><label>Responsable</label><input type="text" name="responsable"></div>
+                        <div class="field">
+                            <div class="toggle-grid">
+                                <label class="toggle-label"><input type="checkbox" name="activo" checked><span>Activo</span></label>
+                                <label class="toggle-label"><input type="checkbox" name="controla_stock" checked><span>Controla stock</span></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-section">
+                    <h3 class="section-title">Coordenadas Operativas</h3>
+                    <p class="section-desc">
+                        Define las coordenadas del almacén para validar que los conteos e inventarios
+                        se realicen físicamente en el lugar correcto.
+                    </p>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Latitud</label>
+                            <input type="number" step="any" name="gps_lat_op" id="alm_lat">
+                        </div>
+                        <div class="field">
+                            <label>Longitud</label>
+                            <input type="number" step="any" name="gps_lon_op" id="alm_lon">
+                        </div>
+                        <div class="field">
+                            <label>Radio operativo (metros)</label>
+                            <input type="number" name="gps_radio_op_metros" value="50">
+                        </div>
+                        <div class="field" style="align-self:end">
+                            <button type="button" class="btn-secondary"
+                                    onclick="navigator.geolocation.getCurrentPosition(p => {
+                                        document.getElementById('alm_lat').value = p.coords.latitude.toFixed(7);
+                                        document.getElementById('alm_lon').value = p.coords.longitude.toFixed(7);
+                                    })">
+                                Usar mi ubicacion
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar almacén</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+<script>const toast=document.getElementById('toast');if(toast)setTimeout(()=>toast.style.opacity='0',3000);</script>
+{% endblock %}

@@ -1,0 +1,5 @@
+<div class="barra-result">
+    <strong>{{ producto.nombre }}</strong>
+    <span>S/ {{ "%.2f"|format(producto.precio_venta or 0) }}</span>
+    <a href="/catalogo/{{ producto.id }}">Ver producto →</a>
+</div>

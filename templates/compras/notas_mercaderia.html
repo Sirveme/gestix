@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Notas de Mercaderia — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/compras/" class="page-back">&larr; Compras</a>
+                <h1>Notas Inteligentes de Mercaderia</h1>
+                <span class="page-sub">
+                    Productos vendidos con stock negativo — pendientes de regularizar
+                </span>
+            </div>
+
+            {% if notas %}
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Codigo</th><th>Almacen</th><th>Items</th>
+                            <th>Fecha</th><th>Estado</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for n in notas %}
+                        <tr>
+                            <td><code>{{ n.codigo }}</code></td>
+                            <td>Almacen {{ n.id_almacen }}</td>
+                            <td>{{ n.items|length }} producto(s)</td>
+                            <td>{{ n.fecha_generacion.strftime('%d/%m/%Y') }}</td>
+                            <td>
+                                <span class="badge
+                                    {% if n.estado == 'regularizada' %}badge-ok
+                                    {% elif n.estado == 'pendiente' %}badge-warn
+                                    {% else %}badge-off{% endif %}">
+                                    {{ n.estado }}
+                                </span>
+                            </td>
+                            <td><a href="/compras/notas-mercaderia/{{ n.id }}" class="btn-icon">&rarr;</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="coming-soon-card">
+                <div class="cs-icon">OK</div>
+                <h3>Sin notas pendientes</h3>
+                <p>No hay ventas con stock negativo por regularizar.</p>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+{% endblock %}

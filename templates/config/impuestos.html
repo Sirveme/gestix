@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+{% block title %}Impuestos — Configuración Gestix{% endblock %}
+
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+
+            {% if toast %}
+            <div class="toast toast-{{ toast_tipo }}" id="toast">{{ toast }}</div>
+            {% endif %}
+
+            <div class="page-header">
+                <a href="/config" class="page-back">← Configuración</a>
+                <h1>Impuestos</h1>
+            </div>
+
+            <form method="post" action="/config/impuestos"
+                  hx-post="/config/impuestos"
+                  hx-target="#form-impuestos"
+                  hx-swap="outerHTML"
+                  id="form-impuestos">
+
+                <div class="form-section">
+                    <h3 class="section-title">Parámetros Generales</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>IGV (%)</label>
+                            <input type="number" step="0.01" name="igv" value="{{ impuestos.igv if impuestos else 18.00 }}">
+                        </div>
+                        <div class="field">
+                            <label>ICBPER (S/)</label>
+                            <input type="number" step="0.01" name="icbper" value="{{ impuestos.icbper if impuestos else 0.50 }}">
+                        </div>
+                        <div class="field">
+                            <label>UIT</label>
+                            <input type="number" step="0.01" name="uit" value="{{ impuestos.uit if impuestos else 5350.00 }}">
+                        </div>
+                        <div class="field">
+                            <label><input type="checkbox" name="isc_activo" {% if impuestos and impuestos.isc_activo %}checked{% endif %}> ISC activo</label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">Percepción / Retención</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label><input type="checkbox" name="percepcion_activo" {% if impuestos and impuestos.percepcion_activo %}checked{% endif %}> Percepción activa</label>
+                        </div>
+                        <div class="field">
+                            <label>Tasa percepción (%)</label>
+                            <input type="number" step="0.01" name="percepcion_tasa" value="{{ impuestos.percepcion_tasa if impuestos else 2.00 }}">
+                        </div>
+                        <div class="field">
+                            <label><input type="checkbox" name="retencion_activo" {% if impuestos and impuestos.retencion_activo %}checked{% endif %}> Retención activa</label>
+                        </div>
+                        <div class="field">
+                            <label>Tasa retención (%)</label>
+                            <input type="number" step="0.01" name="retencion_tasa" value="{{ impuestos.retencion_tasa if impuestos else 3.00 }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">Rentas</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Renta 4ta (%)</label>
+                            <input type="number" step="0.01" name="renta_4ta" value="{{ impuestos.renta_4ta if impuestos else 8.00 }}">
+                        </div>
+                        <div class="field">
+                            <label>Renta 5ta (%)</label>
+                            <input type="number" step="0.01" name="renta_5ta" value="{{ impuestos.renta_5ta if impuestos else 8.00 }}">
+                        </div>
+                        <div class="field">
+                            <label>Renta liq. compra (%)</label>
+                            <input type="number" step="0.01" name="renta_liqcom" value="{{ impuestos.renta_liqcom if impuestos else 1.50 }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">Pagos a cuenta (Renta 3ra)</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Método</label>
+                            <select name="pago_cuenta_metodo">
+                                <option value="coef" {% if impuestos and impuestos.pago_cuenta_metodo == 'coef' %}selected{% endif %}>Coeficiente</option>
+                                <option value="porcentaje" {% if impuestos and impuestos.pago_cuenta_metodo == 'porcentaje' %}selected{% endif %}>Porcentaje</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Coeficiente</label>
+                            <input type="number" step="0.0001" name="pago_cuenta_coeficiente" value="{{ impuestos.pago_cuenta_coeficiente if impuestos else 0.0000 }}">
+                        </div>
+                        <div class="field">
+                            <label>Porcentaje (%)</label>
+                            <input type="number" step="0.01" name="pago_cuenta_porcentaje" value="{{ impuestos.pago_cuenta_porcentaje if impuestos else 1.50 }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ISC -->
+                <div class="form-section">
+                    <h3 class="section-title">ISC — Impuesto Selectivo al Consumo</h3>
+                    <p class="section-desc">El ISC varía por producto. Aquí defines si aplica y la tasa general referencial.</p>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label class="toggle-label">
+                                <input type="checkbox" name="isc_activo" {% if impuestos and impuestos.isc_activo %}checked{% endif %}>
+                                <span>ISC activo para este negocio</span>
+                            </label>
+                        </div>
+                        <div class="field">
+                            <label>Tasa ISC referencial (%)</label>
+                            <input type="number" name="isc_tasa_default" step="0.01"
+                                   value="{{ impuestos.isc_tasa_default if impuestos else 0 }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Interés moratorio y multas -->
+                <div class="form-section">
+                    <h3 class="section-title">Interés Moratorio y Multas SUNAT</h3>
+                    <p class="section-desc">
+                        Estos valores se usan para calcular cuánto pagaría el negocio si omite declarar o pagar.
+                        Gestix los usa en alertas preventivas.
+                    </p>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>TIM — Tasa interés moratorio mensual (%)</label>
+                            <input type="number" name="tasa_interes_moratorio" step="0.0001"
+                                   value="{{ impuestos.tasa_interes_moratorio if impuestos else 1.2 }}"
+                                   placeholder="1.2000">
+                            <span class="field-hint">Vigente: 1.2% mensual (SUNAT)</span>
+                        </div>
+                        <div class="field">
+                            <label>Multa por no declarar (% UIT)</label>
+                            <input type="number" name="multa_no_declarar" step="0.01"
+                                   value="{{ impuestos.multa_no_declarar if impuestos else 100 }}">
+                        </div>
+                        <div class="field">
+                            <label>Multa por declarar en cero (% UIT)</label>
+                            <input type="number" name="multa_declarar_cero" step="0.01"
+                                   value="{{ impuestos.multa_declarar_cero if impuestos else 50 }}">
+                        </div>
+                        <div class="field">
+                            <label>Multa por omisión IGV (% tributo)</label>
+                            <input type="number" name="multa_omision_igv" step="0.01"
+                                   value="{{ impuestos.multa_omision_igv if impuestos else 50 }}">
+                        </div>
+                        <div class="field">
+                            <label>Multa por no emitir CPE (% UIT)</label>
+                            <input type="number" name="multa_no_emitir_cpe" step="0.01"
+                                   value="{{ impuestos.multa_no_emitir_cpe if impuestos else 25 }}">
+                        </div>
+                        <div class="field">
+                            <label>Gradualidad subsanación voluntaria (%)</label>
+                            <input type="number" name="gradualidad_subsanacion_voluntaria" step="0.01"
+                                   value="{{ impuestos.gradualidad_subsanacion_voluntaria if impuestos else 95 }}">
+                            <span class="field-hint">Descuento sobre multa si subsana antes de fiscalización</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar cambios</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+
+<script>
+const toast = document.getElementById('toast');
+if (toast) setTimeout(() => toast.style.opacity = '0', 3000);
+</script>
+{% endblock %}

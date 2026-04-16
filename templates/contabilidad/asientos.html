@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Libro Diario — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <a href="/contabilidad/" class="page-back">&larr; Contabilidad</a>
+                    <h1>Libro Diario</h1>
+                    <span class="page-sub">Periodo: {{ periodo }}</span>
+                </div>
+                <form method="get" style="display:flex;gap:0.75rem;align-items:flex-end">
+                    <div class="field">
+                        <label>Periodo</label>
+                        <input type="month" name="periodo" value="{{ periodo }}" class="field-select" style="width:auto">
+                    </div>
+                    <button type="submit" class="btn-secondary">Filtrar</button>
+                </form>
+            </div>
+
+            <div class="kpi-grid" style="margin-bottom:1.25rem">
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-cyan">AST</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">{{ asientos|length }}</span>
+                        <span class="kpi-label">Asientos</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-green">DEB</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">S/ {{ "%.2f"|format(total_debe) }}</span>
+                        <span class="kpi-label">Total Debe</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-violet">HAB</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">S/ {{ "%.2f"|format(total_haber) }}</span>
+                        <span class="kpi-label">Total Haber</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Fecha</th>
+                            <th>Glosa</th>
+                            <th>Origen</th>
+                            <th style="text-align:right">Debe</th>
+                            <th style="text-align:right">Haber</th>
+                            <th>Estado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in asientos %}
+                        <tr>
+                            <td>{{ a.numero }}</td>
+                            <td>{{ a.fecha.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ a.glosa }}</td>
+                            <td><span class="badge badge-off">{{ a.origen }}</span></td>
+                            <td style="text-align:right">S/ {{ "%.2f"|format(a.total_debe) }}</td>
+                            <td style="text-align:right">S/ {{ "%.2f"|format(a.total_haber) }}</td>
+                            <td>
+                                {% if a.estado == 'contabilizado' %}
+                                <span class="badge badge-ok">{{ a.estado }}</span>
+                                {% elif a.estado == 'anulado' %}
+                                <span class="badge badge-warn">{{ a.estado }}</span>
+                                {% else %}
+                                <span class="badge badge-off">{{ a.estado }}</span>
+                                {% endif %}
+                            </td>
+                            <td><a href="/contabilidad/asientos/{{ a.id }}" class="btn-icon">Ver</a></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="8" class="table-empty">Sin asientos para este periodo</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

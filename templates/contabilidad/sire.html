@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Cruce SIRE — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <a href="/contabilidad/" class="page-back">&larr; Contabilidad</a>
+                    <h1>Cruce SIRE</h1>
+                    <span class="page-sub">Gestix vs SUNAT &mdash; Periodo: {{ periodo }}</span>
+                </div>
+                <form method="get" style="display:flex;gap:0.75rem;align-items:flex-end">
+                    <div class="field">
+                        <label>Periodo</label>
+                        <input type="month" name="periodo" value="{{ periodo }}" class="field-select" style="width:auto">
+                    </div>
+                    <button type="submit" class="btn-secondary">Filtrar</button>
+                </form>
+            </div>
+
+            {% if diferencias or solo_sire %}
+            <div class="kpi-grid" style="margin-bottom:1.25rem">
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-cyan">TOT</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">{{ registros|length }}</span>
+                        <span class="kpi-label">Registros SIRE</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-orange">DIF</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">{{ diferencias|length }}</span>
+                        <span class="kpi-label">Con diferencia</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-red">SOL</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">{{ solo_sire|length }}</span>
+                        <span class="kpi-label">Solo en SIRE</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th>
+                            <th>Serie-Num</th>
+                            <th>Fecha</th>
+                            <th>RUC</th>
+                            <th>Nombre</th>
+                            <th style="text-align:right">Total</th>
+                            <th>Estado cruce</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in registros %}
+                        <tr>
+                            <td>{{ r.tipo }}</td>
+                            <td><code>{{ r.serie }}-{{ r.numero }}</code></td>
+                            <td>{{ r.fecha_emision.strftime('%d/%m/%Y') if r.fecha_emision else '—' }}</td>
+                            <td>{{ r.ruc_contraparte }}</td>
+                            <td>{{ r.nombre_contraparte }}</td>
+                            <td style="text-align:right">S/ {{ "%.2f"|format(r.total) }}</td>
+                            <td>
+                                {% if r.estado_cruce == 'ok' %}
+                                <span class="badge badge-ok">OK</span>
+                                {% elif r.estado_cruce == 'diferencia' %}
+                                <span class="badge badge-warn">Diferencia</span>
+                                {% elif r.estado_cruce == 'solo_sire' %}
+                                <span class="badge" style="background:rgba(255,68,68,0.15);color:var(--red)">Solo SIRE</span>
+                                {% else %}
+                                <span class="badge badge-off">{{ r.estado_cruce }}</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" class="table-empty">Sin registros SIRE para este periodo. Importar desde SUNAT.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Lista de Compras — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <a href="/compras/" class="page-back">&larr; Compras</a>
+                    <h1>Registro de Compras</h1>
+                    <span class="page-sub">Total periodo: S/ {{ "%.2f"|format(total_periodo) }}</span>
+                </div>
+                <a href="/compras/nueva" class="btn-primary">+ Nueva compra</a>
+            </div>
+
+            <form method="get" style="display:flex;gap:0.75rem;margin-bottom:1.25rem;flex-wrap:wrap;align-items:flex-end">
+                <div class="field">
+                    <label>Desde</label>
+                    <input type="date" name="fecha_desde" value="{{ desde }}" class="field-select" style="width:auto">
+                </div>
+                <div class="field">
+                    <label>Hasta</label>
+                    <input type="date" name="fecha_hasta" value="{{ hasta }}" class="field-select" style="width:auto">
+                </div>
+                <div class="field">
+                    <label>Estado</label>
+                    <select name="estado" class="field-select" style="width:auto">
+                        <option value="">Todos</option>
+                        <option value="por_aprobar" {% if estado == 'por_aprobar' %}selected{% endif %}>Por aprobar</option>
+                        <option value="aprobada" {% if estado == 'aprobada' %}selected{% endif %}>Aprobadas</option>
+                        <option value="observada" {% if estado == 'observada' %}selected{% endif %}>Observadas</option>
+                        <option value="anulada" {% if estado == 'anulada' %}selected{% endif %}>Anuladas</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-secondary">Filtrar</button>
+            </form>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Codigo</th><th>Proveedor</th><th>Documento</th>
+                            <th>Total</th><th>Estado</th><th>Fecha</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for c in compras %}
+                        <tr>
+                            <td><code>{{ c.codigo }}</code></td>
+                            <td>{{ c.nombre_proveedor or '&mdash;' }}</td>
+                            <td>{{ c.serie_doc or '' }}-{{ c.numero_doc or '' }}</td>
+                            <td>S/ {{ "%.2f"|format(c.total) }}</td>
+                            <td><span class="badge {% if c.estado == 'aprobada' %}badge-ok{% elif c.estado == 'por_aprobar' %}badge-warn{% else %}badge-off{% endif %}">{{ c.estado.replace('_',' ') }}</span></td>
+                            <td>{{ c.fecha_emision_doc.strftime('%d/%m/%Y') }}</td>
+                            <td><a href="/compras/{{ c.id }}" class="btn-icon">&rarr;</a></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" class="table-empty">Sin compras en este periodo</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+{% block title %}Nueva Compra — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/compras/" class="page-back">&larr; Compras</a>
+                <h1>Nueva Compra</h1>
+            </div>
+
+            <div class="form-section" style="margin-bottom:1.25rem">
+                <h3 class="section-title">Leer documento con IA</h3>
+                <p class="section-desc">
+                    Sube una foto o PDF de la factura/guia y Gestix extrae los datos automaticamente.
+                </p>
+                <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
+                    <div class="field" style="flex:1">
+                        <label>Archivo (JPG, PNG, PDF)</label>
+                        <input type="file" id="archivo-doc"
+                               accept="image/*,.pdf"
+                               onchange="leerConIA()">
+                    </div>
+                    <div id="ia-estado" style="font-size:0.85rem;color:var(--text3)"></div>
+                </div>
+            </div>
+
+            <form method="post" action="/compras/nueva" id="form-compra">
+                <div class="form-section">
+                    <h3 class="section-title">Datos del documento</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>RUC del proveedor</label>
+                            <div class="input-group">
+                                <input type="text" name="ruc_proveedor" id="ruc-prov"
+                                       maxlength="11" placeholder="20xxxxxxxxx">
+                                <button type="button" class="input-btn"
+                                        onclick="buscarRUC()">Buscar</button>
+                            </div>
+                        </div>
+                        <div class="field field-wide">
+                            <label>Nombre / Razon Social *</label>
+                            <input type="text" name="nombre_proveedor"
+                                   id="nombre-prov" required>
+                        </div>
+                        <div class="field">
+                            <label>Tipo de documento</label>
+                            <select name="tipo_doc_sunat" class="field-select" id="tipo-doc">
+                                <option value="01">01 — Factura</option>
+                                <option value="03">03 — Boleta</option>
+                                <option value="12">12 — Ticket</option>
+                                <option value="52">52 — Liquidacion compra</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Serie</label>
+                            <input type="text" name="serie_doc" id="serie-doc"
+                                   maxlength="4" placeholder="F001">
+                        </div>
+                        <div class="field">
+                            <label>Numero</label>
+                            <input type="text" name="numero_doc" id="numero-doc"
+                                   placeholder="00000001">
+                        </div>
+                        <div class="field">
+                            <label>Fecha de emision *</label>
+                            <input type="date" name="fecha_emision_doc"
+                                   id="fecha-doc" required>
+                        </div>
+                        <div class="field">
+                            <label>Moneda</label>
+                            <select name="moneda" class="field-select">
+                                <option value="PEN">PEN — Soles</option>
+                                <option value="USD">USD — Dolares</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Tipo de cambio</label>
+                            <input type="number" name="tipo_cambio"
+                                   step="0.0001" value="1.0000">
+                        </div>
+                        <div class="field">
+                            <label>Almacen destino</label>
+                            <select name="id_almacen" class="field-select">
+                                <option value="">— Seleccionar —</option>
+                                {% for a in almacenes %}
+                                <option value="{{ a.id }}">{{ a.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field field-wide">
+                            <label>Nota</label>
+                            <input type="text" name="nota"
+                                   placeholder="Observaciones">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <a href="/compras/" class="btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn-primary">
+                        Crear compra y agregar items
+                    </button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+
+<script>
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('fecha-doc').value = today;
+
+async function leerConIA() {
+    const file = document.getElementById('archivo-doc').files[0];
+    if (!file) return;
+
+    document.getElementById('ia-estado').textContent = 'Leyendo documento...';
+
+    const formData = new FormData();
+    formData.append('archivo', file);
+
+    try {
+        const resp = await fetch('/compras/leer-documento', {
+            method: 'POST', body: formData
+        });
+        const datos = await resp.json();
+
+        if (datos.error) {
+            document.getElementById('ia-estado').textContent = 'Error: ' + datos.error;
+            return;
+        }
+
+        if (datos.ruc_proveedor)
+            document.getElementById('ruc-prov').value = datos.ruc_proveedor;
+        if (datos.nombre_proveedor)
+            document.getElementById('nombre-prov').value = datos.nombre_proveedor;
+        if (datos.tipo_doc)
+            document.getElementById('tipo-doc').value = datos.tipo_doc;
+        if (datos.serie)
+            document.getElementById('serie-doc').value = datos.serie;
+        if (datos.numero)
+            document.getElementById('numero-doc').value = datos.numero;
+        if (datos.fecha_emision)
+            document.getElementById('fecha-doc').value = datos.fecha_emision;
+
+        document.getElementById('ia-estado').textContent =
+            'Datos extraidos. Verifica y corrige si es necesario.';
+
+        window._itemsIA = datos.items || [];
+
+    } catch(e) {
+        document.getElementById('ia-estado').textContent = 'Error al leer documento';
+    }
+}
+
+function buscarRUC() {
+    const ruc = document.getElementById('ruc-prov').value;
+    if (ruc.length !== 11) return alert('RUC debe tener 11 digitos');
+    alert('API RUC se configurara en Configuracion > Integraciones > API Consulta RUC');
+}
+</script>
+{% endblock %}

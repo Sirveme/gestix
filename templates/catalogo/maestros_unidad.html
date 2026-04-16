@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Unidades de Medida — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            {% if toast %}<div class="toast toast-ok" id="toast">{{ toast }}</div>{% endif %}
+            <div class="page-header">
+                <a href="/catalogo/maestros" class="page-back">← Maestros</a>
+                <h1>Unidades de Medida</h1>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 360px;gap:1.5rem;align-items:start">
+
+                <!-- Lista -->
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Nombre</th>
+                                <th>Abreviado</th>
+                                <th>Cód. SUNAT</th>
+                                <th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for u in unidades %}
+                            <tr>
+                                <td>{{ u.nombre }}</td>
+                                <td><code class="codigo-chip">{{ u.abreviado }}</code></td>
+                                <td>{{ u.codigo_sunat or '—' }}</td>
+                                <td>
+                                    <span class="badge {% if u.activo %}badge-ok{% else %}badge-off{% endif %}">
+                                        {% if u.activo %}Activo{% else %}Inactivo{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="table-empty">Sin unidades registradas</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Formulario -->
+                <div class="form-section">
+                    <h3 class="section-title">Agregar unidad</h3>
+                    <form method="post" action="/catalogo/maestros/unidad">
+                        <input type="hidden" name="id" value="">
+                        <div class="form-grid">
+                            <div class="field field-wide">
+                                <label>Nombre *</label>
+                                <input type="text" name="nombre" required autofocus placeholder="Kilogramo">
+                            </div>
+                            <div class="field">
+                                <label>Abreviado *</label>
+                                <input type="text" name="abreviado" required maxlength="6" placeholder="KG">
+                            </div>
+                            <div class="field">
+                                <label>Cód. SUNAT</label>
+                                <input type="text" name="codigo_sunat" maxlength="3" placeholder="KGM">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">Agregar</button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </main>
+    </div>
+</div>
+<script>const t=document.getElementById('toast');if(t)setTimeout(()=>t.style.opacity='0',3000);</script>
+{% endblock %}

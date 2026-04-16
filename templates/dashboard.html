@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block title %}Dashboard — Gestix{% endblock %}
+
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+
+        <!-- Dashboard content -->
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Dashboard</h1>
+                <span class="page-sub">Bienvenido a Gestix · <strong>{{ empresa_nombre }}</strong></span>
+            </div>
+
+            <!-- KPI cards placeholder -->
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-cyan">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <line x1="12" y1="1" x2="12" y2="23"/>
+                            <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/>
+                        </svg>
+                    </div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">S/ 0.00</span>
+                        <span class="kpi-label">Ventas hoy</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-violet">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/>
+                        </svg>
+                    </div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">0</span>
+                        <span class="kpi-label">Comprobantes emitidos</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-green">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="2" y="3" width="20" height="14" rx="2"/>
+                        </svg>
+                    </div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">0</span>
+                        <span class="kpi-label">Productos en stock</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-orange">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                            <circle cx="9" cy="7" r="4"/>
+                        </svg>
+                    </div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">0</span>
+                        <span class="kpi-label">Clientes activos</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="coming-soon-card">
+                <div class="cs-icon">🚀</div>
+                <h3>Módulos en construcción</h3>
+                <p>Ventas · Compras · Inventario · Contabilidad · IA · Voz</p>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

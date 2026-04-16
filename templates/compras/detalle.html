@@ -1,0 +1,238 @@
+{% extends "base.html" %}
+{% block title %}{{ compra.codigo }} — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <a href="/compras/" class="page-back">&larr; Compras</a>
+                    <h1>{{ compra.codigo }}</h1>
+                    <span class="page-sub">
+                        {{ compra.serie_doc or '' }}-{{ compra.numero_doc or '' }}
+                        - {{ compra.nombre_proveedor or 'Sin proveedor' }}
+                    </span>
+                </div>
+                <div style="display:flex;gap:0.75rem;align-items:center">
+                    <span class="badge
+                        {% if compra.estado == 'aprobada' %}badge-ok
+                        {% elif compra.estado == 'por_aprobar' %}badge-warn
+                        {% else %}badge-off{% endif %}">
+                        {{ compra.estado.replace('_', ' ').upper() }}
+                    </span>
+                    {% if compra.estado == 'por_aprobar' %}
+                    <button class="btn-primary" onclick="aprobarCompra()">Aprobar</button>
+                    <button class="btn-secondary" onclick="observarCompra()">Observar</button>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">
+
+                <div class="form-section">
+                    <h3 class="section-title">Datos del documento</h3>
+                    <table class="data-table">
+                        <tr><td>Proveedor</td><td><strong>{{ compra.nombre_proveedor or '&mdash;' }}</strong></td></tr>
+                        <tr><td>RUC</td><td>{{ compra.ruc_proveedor or '&mdash;' }}</td></tr>
+                        <tr><td>Tipo doc.</td><td>{{ compra.tipo_doc_sunat }}</td></tr>
+                        <tr><td>Serie-Numero</td><td>{{ compra.serie_doc }}-{{ compra.numero_doc }}</td></tr>
+                        <tr><td>Fecha emision</td><td>{{ compra.fecha_emision_doc.strftime('%d/%m/%Y') }}</td></tr>
+                        <tr><td>Moneda</td><td>{{ compra.moneda }}</td></tr>
+                        {% if compra.documento_leido_por_ia %}
+                        <tr><td>Lectura IA</td><td><span class="badge badge-ok">Procesado</span></td></tr>
+                        {% endif %}
+                    </table>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">Totales</h3>
+                    <table class="data-table">
+                        <tr><td>Subtotal</td><td>S/ {{ "%.2f"|format(compra.subtotal) }}</td></tr>
+                        <tr><td>IGV</td><td>S/ {{ "%.2f"|format(compra.igv) }}</td></tr>
+                        <tr><td><strong>Total</strong></td><td><strong>S/ {{ "%.2f"|format(compra.total) }}</strong></td></tr>
+                        <tr><td>Pagado</td><td>S/ {{ "%.2f"|format(total_pagado) }}</td></tr>
+                        <tr><td>Saldo</td><td><strong style="color:{% if saldo > 0 %}var(--orange){% else %}var(--green){% endif %}">S/ {{ "%.2f"|format(saldo) }}</strong></td></tr>
+                    </table>
+
+                    {% if compra.fecha_aprobacion %}
+                    <div style="margin-top:1rem;padding:0.75rem;background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.2);border-radius:var(--radio-sm)">
+                        <div style="font-size:0.8rem;color:var(--green)">Aprobado por {{ compra.nombre_aprobador }}</div>
+                        <div style="font-size:0.75rem;color:var(--text3)">{{ compra.fecha_aprobacion.strftime('%d/%m/%Y %H:%M') }}</div>
+                        {% if compra.observacion_aprobacion %}
+                        <div style="font-size:0.8rem;margin-top:0.25rem">{{ compra.observacion_aprobacion }}</div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-section" style="grid-column:1/-1">
+                    <h3 class="section-title">Items de la compra</h3>
+                    <table class="data-table" style="margin-bottom:1rem">
+                        <thead>
+                            <tr><th>Producto</th><th>Unidad</th><th>Cantidad</th>
+                                <th>Precio unit.</th><th>IGV</th><th>Total</th><th>Lote/Vto.</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for item in compra.items %}
+                            <tr>
+                                <td><strong>{{ item.nombre_producto }}</strong><br>
+                                    <small>{{ item.codigo_producto }}</small></td>
+                                <td>{{ item.unidad }}</td>
+                                <td>{{ "%.3f"|format(item.cantidad) }}</td>
+                                <td>S/ {{ "%.4f"|format(item.precio_unitario) }}</td>
+                                <td>S/ {{ "%.2f"|format(item.igv) }}</td>
+                                <td><strong>S/ {{ "%.2f"|format(item.total) }}</strong></td>
+                                <td>
+                                    {% if item.lote %}L: {{ item.lote }}{% endif %}
+                                    {% if item.fecha_vencimiento %}<br>Vto: {{ item.fecha_vencimiento }}{% endif %}
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="7" class="table-empty">Sin items</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    {% if compra.estado == 'por_aprobar' %}
+                    <div class="mini-form">
+                        <h4 style="color:var(--text2);font-size:0.85rem;margin-bottom:0.75rem">Agregar item</h4>
+                        <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:flex-end">
+                            <div class="field" style="flex:2;min-width:150px">
+                                <label>Producto</label>
+                                <input type="text" id="item-nombre" placeholder="Buscar o escribir nombre">
+                            </div>
+                            <div class="field" style="flex:1;min-width:80px">
+                                <label>Cantidad</label>
+                                <input type="number" id="item-cant" value="1" step="0.001">
+                            </div>
+                            <div class="field" style="flex:1;min-width:80px">
+                                <label>Precio unit.</label>
+                                <input type="number" id="item-precio" value="0" step="0.0001">
+                            </div>
+                            <div class="field" style="flex:1;min-width:60px">
+                                <label>Unidad</label>
+                                <input type="text" id="item-unidad" value="UND">
+                            </div>
+                            <div class="field" style="min-width:100px">
+                                <label>Lote</label>
+                                <input type="text" id="item-lote" placeholder="Opcional">
+                            </div>
+                            <button class="btn-secondary" onclick="agregarItem({{ compra.id }})">+ Agregar</button>
+                        </div>
+                        <div id="item-resultado" style="font-size:0.85rem;margin-top:0.5rem;color:var(--text3)"></div>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-section" style="grid-column:1/-1">
+                    <h3 class="section-title">Pagos registrados</h3>
+                    {% if compra.pagos %}
+                    <table class="data-table">
+                        <thead><tr><th>Fecha</th><th>Medio</th><th>Referencia</th><th>Monto</th></tr></thead>
+                        <tbody>
+                            {% for p in compra.pagos %}
+                            <tr>
+                                <td>{{ p.fecha }}</td>
+                                <td>{{ p.medio }}</td>
+                                <td>{{ p.referencia or '&mdash;' }}</td>
+                                <td>S/ {{ "%.2f"|format(p.monto) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    {% else %}
+                    <p style="color:var(--text3);font-size:0.875rem">Sin pagos registrados.</p>
+                    {% endif %}
+                </div>
+
+            </div>
+        </main>
+    </div>
+</div>
+
+<div id="modal-aprobar" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+        <h3 class="modal-title">Aprobar compra</h3>
+        <div class="form-grid">
+            <div class="field field-wide">
+                <label>Aprobado por</label>
+                <select id="aprobador-sel" class="field-select">
+                    <option value="" data-nombre="">— Seleccionar responsable —</option>
+                    {% for r in responsables %}
+                    <option value="{{ r.id }}" data-nombre="{{ r.apellidos }}, {{ r.nombres }}">
+                        {{ r.apellidos }}, {{ r.nombres }} — {{ r.cargo }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="field field-wide">
+                <label>Observacion (opcional)</label>
+                <input type="text" id="aprobador-obs" placeholder="Todo conforme">
+            </div>
+        </div>
+        <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+            <button class="btn-secondary" onclick="cerrarModal()">Cancelar</button>
+            <button class="btn-primary" onclick="confirmarAprobacion()">Aprobar</button>
+        </div>
+    </div>
+</div>
+
+<script>
+async function agregarItem(id_compra) {
+    const data = {
+        nombre_producto: document.getElementById('item-nombre').value,
+        cantidad: parseFloat(document.getElementById('item-cant').value),
+        precio_unitario: parseFloat(document.getElementById('item-precio').value),
+        unidad: document.getElementById('item-unidad').value,
+        lote: document.getElementById('item-lote').value || null,
+    };
+    const resp = await fetch(`/compras/${id_compra}/item`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify(data),
+    });
+    const result = await resp.json();
+    if (result.item_id) {
+        document.getElementById('item-resultado').textContent =
+            `Item agregado. Total: S/ ${result.total.toFixed(2)}`;
+        setTimeout(() => location.reload(), 1000);
+    }
+}
+
+function aprobarCompra() {
+    document.getElementById('modal-aprobar').style.display = 'flex';
+}
+
+function cerrarModal() {
+    document.getElementById('modal-aprobar').style.display = 'none';
+}
+
+async function confirmarAprobacion() {
+    const sel = document.getElementById('aprobador-sel');
+    const resp = await fetch('/compras/{{ compra.id }}/aprobar', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            id_aprobador: parseInt(sel.value) || null,
+            nombre_aprobador: sel.selectedOptions[0]?.dataset.nombre || '',
+            observacion: document.getElementById('aprobador-obs').value,
+        }),
+    });
+    const result = await resp.json();
+    if (result.ok) location.reload();
+}
+
+async function observarCompra() {
+    const obs = prompt('Motivo de la observacion:');
+    if (!obs) return;
+    await fetch('/compras/{{ compra.id }}/observar', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({observacion: obs}),
+    });
+    location.reload();
+}
+</script>
+{% endblock %}

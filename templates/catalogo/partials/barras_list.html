@@ -1,0 +1,15 @@
+<table class="data-table">
+    <thead>
+        <tr><th>Código</th><th>Tipo</th></tr>
+    </thead>
+    <tbody>
+        {% for b in barras %}
+        <tr>
+            <td><code class="codigo-chip">{{ b.codigo }}</code></td>
+            <td>{{ b.tipo }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="2" class="table-empty">Sin códigos de barra</td></tr>
+        {% endfor %}
+    </tbody>
+</table>

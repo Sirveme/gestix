@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}Ordenes de Compra — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/compras/" class="page-back">&larr; Compras</a>
+                <h1>Ordenes de Compra</h1>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Codigo</th><th>Proveedor</th><th>Total</th><th>Estado</th><th>Fecha entrega</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for o in ordenes %}
+                        <tr>
+                            <td><code>{{ o.codigo }}</code></td>
+                            <td>{{ o.nombre_proveedor or '&mdash;' }}</td>
+                            <td>S/ {{ "%.2f"|format(o.total) }}</td>
+                            <td><span class="badge badge-ok">{{ o.estado }}</span></td>
+                            <td>{{ o.fecha_entrega_esperada or '&mdash;' }}</td>
+                            <td><a href="#" class="btn-icon">&rarr;</a></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="table-empty">Sin ordenes registradas</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

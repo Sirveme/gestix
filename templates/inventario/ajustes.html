@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% block title %}Ajustes de Inventario &mdash; Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+
+            <div class="page-header">
+                <a href="/inventario/" class="page-back">&larr; Inventario</a>
+                <div>
+                    <h1 class="page-title">Ajustes de Inventario</h1>
+                    <p class="page-sub">Entradas, salidas y correcciones de stock</p>
+                </div>
+                <div style="margin-left:auto;">
+                    <a href="/inventario/ajustes/nuevo/" class="btn-primary">+ Nuevo Ajuste</a>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <form method="get" style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+                    <div class="field">
+                        <label for="almacen">Almacen</label>
+                        <select name="almacen" id="almacen" class="field-select">
+                            <option value="">Todos los almacenes</option>
+                            {% for alm in almacenes %}
+                            <option value="{{ alm.id }}" {% if request.query_params.get('almacen') == alm.id|string %}selected{% endif %}>
+                                {{ alm.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="tipo">Tipo</label>
+                        <select name="tipo" id="tipo" class="field-select">
+                            <option value="">Todos los tipos</option>
+                            <option value="ENTRADA" {% if request.query_params.get('tipo') == 'ENTRADA' %}selected{% endif %}>Entrada</option>
+                            <option value="SALIDA" {% if request.query_params.get('tipo') == 'SALIDA' %}selected{% endif %}>Salida</option>
+                            <option value="CORRECCION" {% if request.query_params.get('tipo') == 'CORRECCION' %}selected{% endif %}>Correccion</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="estado">Estado</label>
+                        <select name="estado" id="estado" class="field-select">
+                            <option value="">Todos los estados</option>
+                            <option value="BORRADOR" {% if request.query_params.get('estado') == 'BORRADOR' %}selected{% endif %}>Borrador</option>
+                            <option value="APROBADO" {% if request.query_params.get('estado') == 'APROBADO' %}selected{% endif %}>Aprobado</option>
+                            <option value="ANULADO" {% if request.query_params.get('estado') == 'ANULADO' %}selected{% endif %}>Anulado</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <button type="submit" class="btn-primary">Filtrar</button>
+                        <a href="/inventario/ajustes/" class="btn-secondary" style="margin-left:.5rem;">Limpiar</a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-wrap">
+                {% if ajustes %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Codigo</th>
+                            <th>Almacen</th>
+                            <th>Tipo</th>
+                            <th>Motivo</th>
+                            <th>Estado</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ajuste in ajustes %}
+                        <tr>
+                            <td><code>{{ ajuste.codigo }}</code></td>
+                            <td>{{ ajuste.almacen }}</td>
+                            <td>{{ ajuste.tipo }}</td>
+                            <td>{{ ajuste.motivo|truncate(50) }}</td>
+                            <td>
+                                {% if ajuste.estado == 'BORRADOR' %}
+                                    <span class="badge badge-off">Borrador</span>
+                                {% elif ajuste.estado == 'APROBADO' %}
+                                    <span class="badge badge-ok">Aprobado</span>
+                                {% elif ajuste.estado == 'ANULADO' %}
+                                    <span class="badge badge-warn">Anulado</span>
+                                {% else %}
+                                    <span class="badge">{{ ajuste.estado }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ ajuste.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <a href="/inventario/ajustes/{{ ajuste.id }}/" class="btn-icon">
+                                    Ver &rarr;
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="table-empty">
+                    No hay ajustes de inventario registrados.
+                    <a href="/inventario/ajustes/nuevo/" class="btn-primary" style="margin-top:1rem; display:inline-block;">
+                        Crear primer ajuste
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+        </main>
+    </div>
+</div>
+{% endblock %}

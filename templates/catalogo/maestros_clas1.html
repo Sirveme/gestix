@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Clasificadores — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            {% if toast %}<div class="toast toast-ok" id="toast">{{ toast }}</div>{% endif %}
+            <div class="page-header">
+                <a href="/catalogo/maestros" class="page-back">← Maestros</a>
+                <h1>Clasificadores de Productos</h1>
+                <span class="page-sub">Familias / Categorías principales (Nivel 1)</span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 360px;gap:1.5rem;align-items:start">
+
+                <!-- Lista -->
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Código</th><th>Nombre</th><th>Estado</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for c in items %}
+                            <tr>
+                                <td><code class="codigo-chip">{{ c.codigo or '—' }}</code></td>
+                                <td><strong>{{ c.nombre }}</strong></td>
+                                <td>
+                                    <span class="badge {% if c.activo %}badge-ok{% else %}badge-off{% endif %}">
+                                        {% if c.activo %}Activo{% else %}Inactivo{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="3" class="table-empty">Sin clasificadores registrados</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Formulario -->
+                <div class="form-section">
+                    <h3 class="section-title">Agregar clasificador</h3>
+                    <form method="post" action="/catalogo/maestros/clas1">
+                        <input type="hidden" name="id" value="">
+                        <div class="form-grid">
+                            <div class="field">
+                                <label>Código</label>
+                                <input type="text" name="codigo" maxlength="10" placeholder="FAM01">
+                            </div>
+                            <div class="field field-wide">
+                                <label>Nombre *</label>
+                                <input type="text" name="nombre" required autofocus placeholder="Electrónica, Ropa...">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn-primary">Agregar</button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </main>
+    </div>
+</div>
+<script>const t=document.getElementById('toast');if(t)setTimeout(()=>t.style.opacity='0',3000);</script>
+{% endblock %}

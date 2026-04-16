@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Roles — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/usuarios/" class="page-back">&larr; Usuarios</a>
+                <h1>Roles del Sistema</h1>
+                <span class="page-sub">Roles predefinidos y sus permisos base</span>
+            </div>
+
+            <div class="config-grid">
+                {% for rol in roles %}
+                <div class="config-card" style="cursor:default;flex-direction:column;align-items:flex-start;gap:0.5rem">
+                    <div style="display:flex;justify-content:space-between;width:100%;align-items:center">
+                        <strong style="font-size:1rem">{{ rol.nombre }}</strong>
+                        {% if rol.es_admin %}
+                        <span class="badge badge-warn">Admin total</span>
+                        {% else %}
+                        <span class="badge badge-ok">Activo</span>
+                        {% endif %}
+                    </div>
+                    {% if rol.descripcion %}
+                    <span style="font-size:0.8rem;color:var(--text3)">{{ rol.descripcion }}</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

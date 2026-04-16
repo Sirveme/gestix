@@ -1,0 +1,10 @@
+{% for s in series %}
+<tr>
+    <td>{{ s.tipo_doc_nombre or s.tipo_doc }}</td>
+    <td><strong>{{ s.serie }}</strong></td>
+    <td>{{ s.correlativo }}</td>
+    <td><span class="badge {% if s.activo %}badge-ok{% else %}badge-off{% endif %}">
+        {% if s.activo %}Activa{% else %}Inactiva{% endif %}
+    </span></td>
+</tr>
+{% endfor %}

@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Compras — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <h1>Compras</h1>
+                    <span class="page-sub">{{ hoy.strftime('%d/%m/%Y') }}</span>
+                </div>
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+                    <a href="/compras/notas-mercaderia" class="btn-secondary">
+                        Notas de Mercaderia
+                        {% if notas_pendientes > 0 %}
+                        <span class="badge badge-warn" style="margin-left:0.25rem">{{ notas_pendientes }}</span>
+                        {% endif %}
+                    </a>
+                    <a href="/compras/ordenes" class="btn-secondary">Ordenes</a>
+                    <a href="/compras/lista" class="btn-secondary">Ver todas</a>
+                    <a href="/compras/nueva" class="btn-primary">+ Nueva compra</a>
+                </div>
+            </div>
+
+            {% if notas_pendientes > 0 %}
+            <div class="alerta-nota-mercaderia">
+                <span>!</span>
+                <div>
+                    <strong>{{ notas_pendientes }} Nota(s) de Mercaderia pendiente(s)</strong>
+                    <p>Hay ventas realizadas con stock negativo que requieren regularizacion contable.</p>
+                </div>
+                <a href="/compras/notas-mercaderia" class="btn-secondary" style="flex-shrink:0">Ver notas</a>
+            </div>
+            {% endif %}
+
+            <div class="kpi-grid" style="margin-bottom:2rem">
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-cyan">S/</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">S/ {{ "%.2f"|format(total_hoy) }}</span>
+                        <span class="kpi-label">Compras hoy</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-orange">PA</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">{{ por_aprobar }}</span>
+                        <span class="kpi-label">Por aprobar</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-violet">NM</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">{{ notas_pendientes }}</span>
+                        <span class="kpi-label">Notas mercaderia pendientes</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <h3 class="section-title">Ultimas compras</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Codigo</th><th>Proveedor</th><th>Documento</th>
+                            <th>Total</th><th>Estado</th><th>Fecha</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for c in ultimas %}
+                        <tr>
+                            <td><code>{{ c.codigo }}</code></td>
+                            <td>{{ c.nombre_proveedor or '&mdash;' }}</td>
+                            <td>{{ c.serie_doc or '' }}-{{ c.numero_doc or '' }}</td>
+                            <td><strong>S/ {{ "%.2f"|format(c.total) }}</strong></td>
+                            <td>
+                                <span class="badge
+                                    {% if c.estado == 'aprobada' %}badge-ok
+                                    {% elif c.estado == 'por_aprobar' %}badge-warn
+                                    {% elif c.estado == 'observada' %}badge-warn
+                                    {% else %}badge-off{% endif %}">
+                                    {{ c.estado.replace('_', ' ') }}
+                                </span>
+                            </td>
+                            <td>{{ c.fecha_emision_doc.strftime('%d/%m/%Y') }}</td>
+                            <td><a href="/compras/{{ c.id }}" class="btn-icon">&rarr;</a></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" class="table-empty">Sin compras registradas</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

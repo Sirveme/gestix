@@ -1,0 +1,193 @@
+{% extends "base.html" %}
+{% block title %}Toma {{ toma.codigo }} &mdash; Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+
+            <div class="page-header">
+                <a href="/inventario/tomas/" class="page-back">&larr; Tomas</a>
+                <div>
+                    <h1 class="page-title">Toma {{ toma.codigo }}</h1>
+                    <p class="page-sub">
+                        {{ toma.almacen }} &mdash; {{ toma.tipo }}
+                        &mdash;
+                        {% if toma.estado == 'BORRADOR' %}
+                            <span class="badge badge-off">Borrador</span>
+                        {% elif toma.estado == 'EN_PROGRESO' %}
+                            <span class="badge badge-warn">En Progreso</span>
+                        {% elif toma.estado == 'FINALIZADA' %}
+                            <span class="badge badge-ok">Finalizada</span>
+                        {% else %}
+                            <span class="badge">{{ toma.estado }}</span>
+                        {% endif %}
+                    </p>
+                </div>
+                {% if toma.estado != 'FINALIZADA' %}
+                <div style="margin-left:auto;">
+                    <button class="btn-primary" onclick="finalizarToma()">
+                        Finalizar Toma
+                    </button>
+                </div>
+                {% endif %}
+            </div>
+
+            {% with contados=toma.items_contados total=toma.total_items %}
+            {% if total > 0 %}
+            <div class="form-section">
+                <div class="section-title">Progreso del Conteo</div>
+                <div style="display:flex; align-items:center; gap:1rem;">
+                    <div style="flex:1; background:#e5e7eb; border-radius:9999px; height:12px; overflow:hidden;">
+                        <div style="width:{% widthratio contados total 100 %}%; background:#2563eb; height:100%; border-radius:9999px; transition:width .3s;"></div>
+                    </div>
+                    <span style="white-space:nowrap; font-size:.9rem; color:#6b7280;">
+                        {{ contados }} / {{ total }} items contados
+                        ({% widthratio contados total 100 %}%)
+                    </span>
+                </div>
+            </div>
+            {% endif %}
+            {% endwith %}
+
+            <div class="table-wrap">
+                {% if toma.items.all %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Codigo</th>
+                            <th>Producto</th>
+                            <th style="text-align:right;">Stock Sistema</th>
+                            <th style="text-align:right;">Conteo Fisico</th>
+                            <th style="text-align:right;">Diferencia</th>
+                            <th>Estado</th>
+                            {% if toma.estado != 'FINALIZADA' %}
+                            <th>Accion</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in toma.items.all %}
+                        <tr id="fila-item-{{ item.id }}">
+                            <td><code>{{ item.producto.codigo }}</code></td>
+                            <td>{{ item.producto.nombre }}</td>
+                            <td style="text-align:right;">{{ item.cantidad_sistema }}</td>
+                            <td style="text-align:right;" id="conteo-{{ item.id }}">
+                                {% if item.contado %}
+                                    {{ item.cantidad_contada }}
+                                {% else %}
+                                    <span style="color:#9ca3af;">&mdash;</span>
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right;" id="dif-{{ item.id }}">
+                                {% if item.contado %}
+                                    {% with dif=item.diferencia %}
+                                    {% if dif < 0 %}
+                                        <span style="color:#dc2626;">{{ dif }}</span>
+                                    {% elif dif > 0 %}
+                                        <span style="color:#16a34a;">+{{ dif }}</span>
+                                    {% else %}
+                                        <span style="color:#6b7280;">0</span>
+                                    {% endif %}
+                                    {% endwith %}
+                                {% else %}
+                                    <span style="color:#9ca3af;">&mdash;</span>
+                                {% endif %}
+                            </td>
+                            <td id="estado-{{ item.id }}">
+                                {% if item.contado %}
+                                    <span class="badge badge-ok">Contado</span>
+                                {% else %}
+                                    <span class="badge badge-off">Pendiente</span>
+                                {% endif %}
+                            </td>
+                            {% if toma.estado != 'FINALIZADA' %}
+                            <td>
+                                <button class="btn-icon"
+                                        onclick="registrarConteo({{ item.id }}, '{{ item.producto.nombre|replace("'", "\\'") }}', {{ item.cantidad_sistema }})"
+                                        id="btn-contar-{{ item.id }}">
+                                    Contar
+                                </button>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="table-empty">
+                    No hay items en esta toma de inventario.
+                </div>
+                {% endif %}
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script>
+var TOMA_ID = {{ toma.id }};
+
+function registrarConteo(itemId, nombreProducto, cantSistema) {
+    var entrada = prompt(
+        'Conteo fisico para "' + nombreProducto + '"' +
+        '\nStock en sistema: ' + cantSistema +
+        '\nIngrese cantidad contada:'
+    );
+    if (entrada === null) return;
+    var cantidad = parseFloat(entrada);
+    if (isNaN(cantidad)) { alert('Ingrese un numero valido.'); return; }
+
+    fetch('/inventario/tomas/' + TOMA_ID + '/items/' + itemId + '/contar/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ cantidad_contada: cantidad })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            var dif = cantidad - cantSistema;
+            document.getElementById('conteo-' + itemId).textContent = cantidad;
+            var difEl = document.getElementById('dif-' + itemId);
+            if (dif < 0) difEl.innerHTML = '<span style="color:#dc2626;">' + dif + '</span>';
+            else if (dif > 0) difEl.innerHTML = '<span style="color:#16a34a;">+' + dif + '</span>';
+            else difEl.innerHTML = '<span style="color:#6b7280;">0</span>';
+            document.getElementById('estado-' + itemId).innerHTML = '<span class="badge badge-ok">Contado</span>';
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo registrar el conteo.'));
+        }
+    })
+    .catch(function() {
+        alert('Error de conexion. Intente nuevamente.');
+    });
+}
+
+function finalizarToma() {
+    if (!confirm('Finalizar esta toma de inventario? Esta accion no se puede deshacer.')) return;
+
+    fetch('/inventario/tomas/' + TOMA_ID + '/finalizar/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            alert('Toma finalizada correctamente.');
+            window.location.reload();
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo finalizar la toma.'));
+        }
+    })
+    .catch(function() {
+        alert('Error de conexion. Intente nuevamente.');
+    });
+}
+</script>
+{% endblock %}

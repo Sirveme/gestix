@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}Inventario &mdash; Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+
+            <div class="page-header">
+                <div>
+                    <h1 class="page-title">Inventario</h1>
+                    <p class="page-sub">Control de stock, tomas, ajustes y activos fijos</p>
+                </div>
+            </div>
+
+            {% if stock_negativo > 0 %}
+            <div class="alerta-nota-mercaderia">
+                <strong>Alerta:</strong> Hay {{ stock_negativo }} producto(s) con stock negativo. Revise el reporte de Stock Actual.
+            </div>
+            {% endif %}
+
+            <div class="kpi-grid">
+                <div class="kpi-card">
+                    <div class="kpi-icon">INV</div>
+                    <div class="kpi-data">
+                        <div class="kpi-value">{{ total_productos|default(0) }}</div>
+                        <div class="kpi-label">Total Productos</div>
+                    </div>
+                </div>
+                <div class="kpi-card {% if stock_negativo > 0 %}kpi-card--warn{% endif %}">
+                    <div class="kpi-icon">(-)</div>
+                    <div class="kpi-data">
+                        <div class="kpi-value">{{ stock_negativo|default(0) }}</div>
+                        <div class="kpi-label">Stock Negativo</div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon">AJU</div>
+                    <div class="kpi-data">
+                        <div class="kpi-value">{{ ajustes_pendientes|default(0) }}</div>
+                        <div class="kpi-label">Ajustes Pendientes</div>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon">SUS</div>
+                    <div class="kpi-data">
+                        <div class="kpi-value">{{ sustento_pendientes|default(0) }}</div>
+                        <div class="kpi-label">Sustento Pendientes</div>
+                    </div>
+                </div>
+            </div>
+
+            <h2 class="section-title" style="margin: 2rem 0 1rem;">Acceso Rapido</h2>
+            <div class="config-grid">
+
+                <a href="/inventario/stock/" class="config-card">
+                    <div class="config-icon">STK</div>
+                    <div class="config-info">
+                        <div class="config-card-title">Stock Actual</div>
+                        <div class="config-card-desc">Consulta niveles de inventario por almacen</div>
+                    </div>
+                    <div class="config-arrow">&rarr;</div>
+                </a>
+
+                <a href="/inventario/ajustes/" class="config-card">
+                    <div class="config-icon">AJU</div>
+                    <div class="config-info">
+                        <div class="config-card-title">Ajustes</div>
+                        <div class="config-card-desc">Registra entradas, salidas y correcciones de stock</div>
+                    </div>
+                    <div class="config-arrow">&rarr;</div>
+                </a>
+
+                <a href="/inventario/transferencias/" class="config-card">
+                    <div class="config-icon">TRF</div>
+                    <div class="config-info">
+                        <div class="config-card-title">Transferencias</div>
+                        <div class="config-card-desc">Mueve mercaderia entre almacenes</div>
+                    </div>
+                    <div class="config-arrow">&rarr;</div>
+                </a>
+
+                <a href="/inventario/tomas/" class="config-card">
+                    <div class="config-icon">TOM</div>
+                    <div class="config-info">
+                        <div class="config-card-title">Tomas de Inventario</div>
+                        <div class="config-card-desc">Conteo fisico y conciliacion de stock</div>
+                    </div>
+                    <div class="config-arrow">&rarr;</div>
+                </a>
+
+                <a href="/inventario/activos/" class="config-card">
+                    <div class="config-icon">ACT</div>
+                    <div class="config-info">
+                        <div class="config-card-title">Activos Fijos</div>
+                        <div class="config-card-desc">Control y valoracion de activos de la empresa</div>
+                    </div>
+                    <div class="config-arrow">&rarr;</div>
+                </a>
+
+                <a href="/inventario/corte" class="config-card">
+                    <div class="config-icon">CTE</div>
+                    <div class="config-info">
+                        <div class="config-card-title">Corte de Inventario</div>
+                        <div class="config-card-desc">Cierre y reporte de periodo de inventario</div>
+                    </div>
+                    <div class="config-arrow">&rarr;</div>
+                </a>
+
+            </div>
+
+        </main>
+    </div>
+</div>
+{% endblock %}

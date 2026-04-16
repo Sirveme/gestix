@@ -1,0 +1,66 @@
+{% extends "base.html" %}
+{% block title %}Cierre de Caja — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/ventas/" class="page-back">&larr; Ventas</a>
+                <h1>Cierre de Caja</h1>
+            </div>
+
+            <div style="max-width:480px">
+                <div class="form-section" style="margin-bottom:1rem">
+                    <h3 class="section-title">Resumen de caja</h3>
+                    <div class="kpi-grid">
+                        <div class="kpi-card">
+                            <div class="kpi-icon kpi-cyan">INI</div>
+                            <div class="kpi-data">
+                                <span class="kpi-value">S/ {{ "%.2f"|format(caja.monto_inicial or 0) }}</span>
+                                <span class="kpi-label">Monto inicial</span>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon kpi-green">VTA</div>
+                            <div class="kpi-data">
+                                <span class="kpi-value">S/ {{ "%.2f"|format(total_ventas) }}</span>
+                                <span class="kpi-label">Total ventas</span>
+                            </div>
+                        </div>
+                        <div class="kpi-card">
+                            <div class="kpi-icon kpi-violet">ESP</div>
+                            <div class="kpi-data">
+                                <span class="kpi-value">S/ {{ "%.2f"|format(total_calculado) }}</span>
+                                <span class="kpi-label">Esperado en caja</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <form method="post" action="/ventas/caja/{{ caja.id }}/cerrar">
+                    <div class="form-section">
+                        <h3 class="section-title">Conteo fisico</h3>
+                        <div class="form-grid">
+                            <div class="field field-wide">
+                                <label>Monto contado en caja (S/)</label>
+                                <input type="number" name="monto_declarado"
+                                       step="0.01" value="{{ total_calculado }}" min="0">
+                            </div>
+                            <div class="field field-wide">
+                                <label>Nota de cierre</label>
+                                <input type="text" name="nota"
+                                       placeholder="Observaciones">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Cerrar caja</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

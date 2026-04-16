@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Pedidos — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <a href="/ventas/" class="page-back">&larr; Ventas</a>
+                    <h1>Pedidos</h1>
+                    <span class="page-sub">{{ fecha.strftime('%d/%m/%Y') }} — Total: S/ {{ "%.2f"|format(total_dia) }}</span>
+                </div>
+                <form method="get" style="display:flex;gap:0.5rem;align-items:center">
+                    <input type="date" name="fecha" value="{{ fecha }}" class="field-select" style="width:auto">
+                    <button type="submit" class="btn-secondary">Buscar</button>
+                </form>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Codigo</th><th>Cliente</th><th>Comprobante</th>
+                            <th>Total</th><th>Medio pago</th><th>Estado</th><th>Hora</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for p in pedidos %}
+                        <tr>
+                            <td><code>{{ p.codigo }}</code></td>
+                            <td>{{ p.nombre_cliente or 'Clientes varios' }}</td>
+                            <td>
+                                {% if p.serie_comprobante %}
+                                {{ p.serie_comprobante }}-{{ p.numero_comprobante }}
+                                {% else %}
+                                <span class="badge badge-off">Ticket</span>
+                                {% endif %}
+                            </td>
+                            <td><strong>S/ {{ "%.2f"|format(p.total) }}</strong></td>
+                            <td>{{ p.medio_pago }}</td>
+                            <td>
+                                <span class="badge {% if p.estado == 'facturado' %}badge-ok{% elif p.estado == 'confirmado' %}badge-warn{% elif p.estado == 'anulado' %}badge-off{% else %}badge-off{% endif %}">
+                                    {{ p.estado }}
+                                </span>
+                            </td>
+                            <td>{{ p.created_at.strftime('%H:%M') }}</td>
+                            <td><a href="/ventas/pedidos/{{ p.id }}" class="btn-icon">&rarr;</a></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="8" class="table-empty">Sin pedidos para esta fecha</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

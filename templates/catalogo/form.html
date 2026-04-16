@@ -1,0 +1,226 @@
+{% extends "base.html" %}
+{% block title %}{{ producto.nombre if producto else 'Nuevo Producto' }} — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/catalogo" class="page-back">← Catálogo</a>
+                <h1>{{ producto.nombre if producto else 'Nuevo Producto' }}</h1>
+                {% if producto %}
+                <div style="display:flex;gap:0.5rem;margin-top:0.5rem">
+                    <a href="/catalogo/{{ producto.id }}/kardex" class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.8rem">
+                        📋 Ver Kardex
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <form hx-post="/catalogo/guardar" hx-target="#form-result" hx-swap="innerHTML"
+                  method="post" action="/catalogo/guardar">
+                <input type="hidden" name="id" value="{{ producto.id if producto else '' }}">
+                <div id="form-result"></div>
+
+                <!-- Datos principales -->
+                <div class="form-section">
+                    <h3 class="section-title">Datos Principales</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Código interno</label>
+                            <input type="text" name="codigo" value="{{ producto.codigo if producto else '' }}" placeholder="AUTO">
+                        </div>
+                        <div class="field field-wide">
+                            <label>Nombre del producto *</label>
+                            <input type="text" name="nombre" value="{{ producto.nombre if producto else '' }}" required>
+                        </div>
+                        <div class="field field-wide">
+                            <label>Descripción</label>
+                            <textarea name="descripcion" rows="2" style="width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:var(--radio-sm);padding:0.8rem;color:var(--text);font-family:'DM Sans',sans-serif;resize:vertical">{{ producto.descripcion if producto else '' }}</textarea>
+                        </div>
+                        <div class="field">
+                            <label>Tipo</label>
+                            <select name="tipo" class="field-select">
+                                {% for opt in [('producto','Producto'),('servicio','Servicio'),('combo','Combo/Paquete')] %}
+                                <option value="{{ opt[0] }}" {% if producto and producto.tipo == opt[0] %}selected{% endif %}>{{ opt[1] }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Unidad de medida *</label>
+                            <select name="id_unidad" class="field-select" required>
+                                <option value="">— Seleccionar —</option>
+                                {% for u in unidades %}
+                                <option value="{{ u.id }}" {% if producto and producto.id_unidad == u.id %}selected{% endif %}>
+                                    {{ u.nombre }} ({{ u.abreviado }})
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Marca</label>
+                            <select name="id_marca" class="field-select">
+                                <option value="">— Sin marca —</option>
+                                {% for m in marcas %}
+                                <option value="{{ m.id }}" {% if producto and producto.id_marca == m.id %}selected{% endif %}>{{ m.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field field-wide">
+                            <label>URL de imagen</label>
+                            <input type="url" name="imagen_url" value="{{ producto.imagen_url if producto else '' }}" placeholder="https://...">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Clasificación -->
+                <div class="form-section">
+                    <h3 class="section-title">Clasificación</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Familia</label>
+                            <select name="id_clasificador1" class="field-select">
+                                <option value="">— Sin clasificar —</option>
+                                {% for c in clasificadores1 %}
+                                <option value="{{ c.id }}" {% if producto and producto.id_clasificador1 == c.id %}selected{% endif %}>{{ c.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Código SUNAT</label>
+                            <input type="text" name="cod_sunat" value="{{ producto.cod_sunat if producto else '' }}" placeholder="84713000">
+                        </div>
+                        <div class="field">
+                            <label>Ubicación en almacén</label>
+                            <input type="text" name="ubicacion" value="{{ producto.ubicacion if producto else '' }}" placeholder="A-3-2">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Precios -->
+                <div class="form-section">
+                    <h3 class="section-title">Precio Principal</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Precio costo (S/)</label>
+                            <input type="number" step="0.0001" name="precio_costo"
+                                   value="{{ producto.precio_costo if producto else 0 }}">
+                        </div>
+                        <div class="field">
+                            <label>Precio venta (S/)</label>
+                            <input type="number" step="0.0001" name="precio_venta"
+                                   value="{{ producto.precio_venta if producto else 0 }}">
+                        </div>
+                        <div class="field">
+                            <label>Stock mínimo</label>
+                            <input type="number" step="0.001" name="stock_minimo"
+                                   value="{{ producto.stock_minimo if producto else 0 }}">
+                        </div>
+                        <div class="field">
+                            <label>Stock máximo</label>
+                            <input type="number" step="0.001" name="stock_maximo"
+                                   value="{{ producto.stock_maximo if producto else 0 }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Opciones -->
+                <div class="form-section">
+                    <h3 class="section-title">Opciones</h3>
+                    <div class="toggle-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:0.75rem">
+                        {% for campo, etiqueta in [
+                            ('activo','Activo'),('inventariado','Controla inventario'),
+                            ('tiene_vencimiento','Tiene fecha de vencimiento'),
+                            ('tiene_lote','Maneja lotes'),('tiene_talla','Maneja tallas'),
+                            ('tiene_color','Maneja colores'),('tiene_serie','Maneja series/IMEI'),
+                            ('afecto_igv','Afecto a IGV'),('afecto_icbper','Afecto ICBPER (bolsas)'),
+                            ('destacado','Producto destacado')
+                        ] %}
+                        <label class="toggle-label">
+                            <input type="checkbox" name="{{ campo }}"
+                                   {% if producto and (producto|attr(campo)) %}checked{% elif not producto and campo in ['activo','inventariado','afecto_igv'] %}checked{% endif %}>
+                            <span>{{ etiqueta }}</span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <a href="/catalogo" class="btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn-primary">Guardar producto</button>
+                </div>
+            </form>
+
+            <!-- Precios adicionales (solo en edición) -->
+            {% if producto %}
+            <div class="form-section" style="margin-top:1.5rem" id="precios-section">
+                <h3 class="section-title">Precios por Lista / Unidad</h3>
+                <div id="precios-list">
+                    {% include "catalogo/partials/precios_list.html" %}
+                </div>
+                <form hx-post="/catalogo/{{ producto.id }}/precio"
+                      hx-target="#precios-list" hx-swap="innerHTML"
+                      hx-on::after-request="this.reset()"
+                      style="margin-top:1rem">
+                    <div class="form-grid">
+                        <div class="field"><label>Nombre</label><input type="text" name="nombre" placeholder="Mayorista" required></div>
+                        <div class="field"><label>Unidad venta</label><input type="text" name="unidad_venta" placeholder="DOC, CAJA, KG" required></div>
+                        <div class="field"><label>Equivalente</label><input type="number" name="equivalente" value="1" step="0.001"></div>
+                        <div class="field"><label>Precio costo</label><input type="number" name="precio_costo" value="0" step="0.0001"></div>
+                        <div class="field"><label>Margen %</label><input type="number" name="margen" value="0" step="0.01"></div>
+                        <div class="field"><label>Precio venta *</label><input type="number" name="precio_venta" value="0" step="0.0001" required></div>
+                        <div class="field" style="align-self:end">
+                            <button type="submit" class="btn-primary">+ Agregar precio</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Códigos de barra -->
+            <div class="form-section" style="margin-top:1rem">
+                <h3 class="section-title">Códigos de Barra</h3>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead><tr><th>Código</th><th>Tipo</th></tr></thead>
+                        <tbody>
+                            {% for b in barras %}
+                            <tr><td><code>{{ b.codigo }}</code></td><td>{{ b.tipo }}</td></tr>
+                            {% else %}
+                            <tr><td colspan="2" class="table-empty">Sin códigos de barra</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Stock actual -->
+            {% if stocks %}
+            <div class="form-section" style="margin-top:1rem">
+                <h3 class="section-title">Stock por Almacén</h3>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead><tr><th>Almacén</th><th>Stock actual</th><th>Reservado</th><th>Disponible</th><th>Costo prom.</th></tr></thead>
+                        <tbody>
+                            {% for s in stocks %}
+                            <tr>
+                                <td>Almacén {{ s.id_almacen }}</td>
+                                <td>{{ "%.3f"|format(s.stock_actual or 0) }}</td>
+                                <td>{{ "%.3f"|format(s.stock_reservado or 0) }}</td>
+                                <td class="{% if s.stock_disponible <= producto.stock_minimo %}text-warn{% else %}text-ok{% endif %}">
+                                    <strong>{{ "%.3f"|format(s.stock_disponible or 0) }}</strong>
+                                </td>
+                                <td>S/ {{ "%.4f"|format(s.costo_promedio or 0) }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            {% endif %}
+            {% endif %}
+
+        </main>
+    </div>
+</div>
+{% endblock %}

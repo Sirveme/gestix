@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Conciliacion Bancaria — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/contabilidad/" class="page-back">&larr; Contabilidad</a>
+                <h1>Conciliacion Bancaria</h1>
+                <span class="page-sub">Notificaciones bancarias vs movimientos Gestix</span>
+            </div>
+
+            <div class="kpi-grid" style="margin-bottom:1.25rem">
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-cyan">TOT</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">{{ movimientos|length }}</span>
+                        <span class="kpi-label">Movimientos</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-orange">PEN</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">{{ pendientes }}</span>
+                        <span class="kpi-label">Pendientes de cruce</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-red">SIN</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">{{ sin_match }}</span>
+                        <span class="kpi-label">Sin match</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Banco</th>
+                            <th>Tipo</th>
+                            <th>Descripcion</th>
+                            <th style="text-align:right">Monto</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in movimientos %}
+                        <tr>
+                            <td>{{ m.fecha.strftime('%d/%m/%Y') }}</td>
+                            <td>{{ m.banco }}</td>
+                            <td>
+                                {% if m.tipo == 'abono' %}
+                                <span class="badge badge-ok">Abono</span>
+                                {% else %}
+                                <span class="badge badge-warn">Cargo</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ m.descripcion or '' }}</td>
+                            <td style="text-align:right;font-weight:600">
+                                {{ m.moneda }} {{ "%.2f"|format(m.monto) }}
+                            </td>
+                            <td>
+                                {% if m.estado_cruce == 'cruzado' %}
+                                <span class="badge badge-ok">Cruzado</span>
+                                {% elif m.estado_cruce == 'sin_match' %}
+                                <span class="badge" style="background:rgba(255,68,68,0.15);color:var(--red)">Sin match</span>
+                                {% elif m.estado_cruce == 'ignorado' %}
+                                <span class="badge badge-off">Ignorado</span>
+                                {% else %}
+                                <span class="badge badge-off">Pendiente</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="table-empty">Sin movimientos bancarios importados</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

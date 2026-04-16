@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Preferencias — Configuración Gestix{% endblock %}
+
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+
+            {% if toast %}
+            <div class="toast toast-{{ toast_tipo }}" id="toast">{{ toast }}</div>
+            {% endif %}
+
+            <div class="page-header">
+                <a href="/config" class="page-back">← Configuración</a>
+                <h1>Preferencias</h1>
+            </div>
+
+            <form method="post" action="/config/preferencias"
+                  hx-post="/config/preferencias"
+                  hx-target="#form-prefs"
+                  hx-swap="outerHTML"
+                  id="form-prefs">
+
+                <div class="form-section">
+                    <h3 class="section-title">Apariencia</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Tema</label>
+                            <select name="tema">
+                                <option value="oscuro" {% if prefs and prefs.tema == 'oscuro' %}selected{% endif %}>Oscuro</option>
+                                <option value="claro" {% if prefs and prefs.tema == 'claro' %}selected{% endif %}>Claro</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Zona horaria</label>
+                            <input type="text" name="zona_horaria" value="{{ prefs.zona_horaria if prefs else 'America/Lima' }}">
+                        </div>
+                        <div class="field">
+                            <label>Formato de fecha</label>
+                            <input type="text" name="formato_fecha" value="{{ prefs.formato_fecha if prefs else 'DD/MM/YYYY' }}">
+                        </div>
+                        <div class="field">
+                            <label>Moneda principal</label>
+                            <input type="text" name="moneda_principal" value="{{ prefs.moneda_principal if prefs else 'PEN' }}" maxlength="3">
+                        </div>
+                        <div class="field">
+                            <label>Decimales precio</label>
+                            <input type="number" name="decimales_precio" value="{{ prefs.decimales_precio if prefs else 2 }}">
+                        </div>
+                        <div class="field">
+                            <label>Decimales cantidad</label>
+                            <input type="number" name="decimales_cantidad" value="{{ prefs.decimales_cantidad if prefs else 3 }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">Notificaciones</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label><input type="checkbox" name="push_activo" {% if prefs and prefs.push_activo %}checked{% endif %}> Push activo</label>
+                        </div>
+                        <div class="field">
+                            <label><input type="checkbox" name="whatsapp_activo" {% if prefs and prefs.whatsapp_activo %}checked{% endif %}> WhatsApp activo</label>
+                        </div>
+                        <div class="field">
+                            <label><input type="checkbox" name="email_activo" {% if prefs and prefs.email_activo %}checked{% endif %}> Email activo</label>
+                        </div>
+                        <div class="field">
+                            <label>Posición toast</label>
+                            <select name="toast_posicion">
+                                {% set pos = prefs.toast_posicion if prefs else 'top-right' %}
+                                <option value="top-right" {% if pos == 'top-right' %}selected{% endif %}>Arriba derecha</option>
+                                <option value="top-left" {% if pos == 'top-left' %}selected{% endif %}>Arriba izquierda</option>
+                                <option value="bottom-right" {% if pos == 'bottom-right' %}selected{% endif %}>Abajo derecha</option>
+                                <option value="bottom-left" {% if pos == 'bottom-left' %}selected{% endif %}>Abajo izquierda</option>
+                                <option value="top-center" {% if pos == 'top-center' %}selected{% endif %}>Arriba centro</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">Comportamiento</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label><input type="checkbox" name="sonidos_activo" {% if prefs and prefs.sonidos_activo %}checked{% endif %}> Sonidos activos</label>
+                        </div>
+                        <div class="field">
+                            <label><input type="checkbox" name="confirmar_antes_anular" {% if prefs and prefs.confirmar_antes_anular %}checked{% endif %}> Confirmar antes de anular</label>
+                        </div>
+                        <div class="field">
+                            <label><input type="checkbox" name="requiere_motivo_descuento" {% if prefs and prefs.requiere_motivo_descuento %}checked{% endif %}> Motivo de descuento requerido</label>
+                        </div>
+                        <div class="field">
+                            <label><input type="checkbox" name="mostrar_costo_en_venta" {% if prefs and prefs.mostrar_costo_en_venta %}checked{% endif %}> Mostrar costo en venta</label>
+                        </div>
+                        <div class="field">
+                            <label>Días alerta vencimiento</label>
+                            <input type="number" name="dias_alerta_vencimiento" value="{{ prefs.dias_alerta_vencimiento if prefs else 30 }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar cambios</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+
+<script>
+const toast = document.getElementById('toast');
+if (toast) setTimeout(() => toast.style.opacity = '0', 3000);
+</script>
+{% endblock %}

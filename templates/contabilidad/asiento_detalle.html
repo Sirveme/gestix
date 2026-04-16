@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+{% block title %}Asiento #{{ asiento.numero }} — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/contabilidad/asientos?periodo={{ asiento.periodo }}" class="page-back">&larr; Libro Diario</a>
+                <h1>Asiento #{{ asiento.numero }}</h1>
+                <span class="page-sub">{{ asiento.periodo }} &mdash; {{ asiento.fecha.strftime('%d/%m/%Y') }}</span>
+            </div>
+
+            <div class="form-section" style="margin-bottom:1.25rem">
+                <div style="display:flex;gap:2rem;flex-wrap:wrap;margin-bottom:1rem">
+                    <div>
+                        <span style="color:var(--text3);font-size:0.8rem">Glosa</span>
+                        <div style="font-weight:600">{{ asiento.glosa }}</div>
+                    </div>
+                    <div>
+                        <span style="color:var(--text3);font-size:0.8rem">Origen</span>
+                        <div><span class="badge badge-off">{{ asiento.origen }}</span></div>
+                    </div>
+                    <div>
+                        <span style="color:var(--text3);font-size:0.8rem">Estado</span>
+                        <div>
+                            {% if asiento.estado == 'contabilizado' %}
+                            <span class="badge badge-ok">{{ asiento.estado }}</span>
+                            {% elif asiento.estado == 'anulado' %}
+                            <span class="badge badge-warn">{{ asiento.estado }}</span>
+                            {% else %}
+                            <span class="badge badge-off">{{ asiento.estado }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% if asiento.origen_codigo %}
+                    <div>
+                        <span style="color:var(--text3);font-size:0.8rem">Doc. origen</span>
+                        <div><code>{{ asiento.origen_codigo }}</code></div>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Cuenta</th>
+                            <th>Nombre</th>
+                            <th>Glosa partida</th>
+                            <th style="text-align:right">Debe</th>
+                            <th style="text-align:right">Haber</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in asiento.partidas %}
+                        <tr>
+                            <td><code>{{ p.codigo_cuenta }}</code></td>
+                            <td>{{ p.nombre_cuenta }}</td>
+                            <td style="color:var(--text3)">{{ p.glosa_partida or '' }}</td>
+                            <td style="text-align:right">{% if p.debe and p.debe > 0 %}S/ {{ "%.2f"|format(p.debe) }}{% endif %}</td>
+                            <td style="text-align:right">{% if p.haber and p.haber > 0 %}S/ {{ "%.2f"|format(p.haber) }}{% endif %}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr style="border-top:2px solid var(--border2)">
+                            <td colspan="3" style="text-align:right;font-weight:700">TOTALES</td>
+                            <td style="text-align:right;font-weight:700;color:var(--green)">S/ {{ "%.2f"|format(asiento.total_debe) }}</td>
+                            <td style="text-align:right;font-weight:700;color:var(--cyan)">S/ {{ "%.2f"|format(asiento.total_haber) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

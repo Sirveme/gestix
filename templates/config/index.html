@@ -1,0 +1,153 @@
+{% extends "base.html" %}
+{% block title %}Configuración — Gestix{% endblock %}
+
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Configuración</h1>
+                <span class="page-sub">Ajusta cada aspecto de Gestix para tu negocio</span>
+            </div>
+
+            <div class="config-grid">
+
+                <a href="/config/empresa" class="config-card">
+                    <div class="config-icon ci-cyan">🏢</div>
+                    <div class="config-info">
+                        <strong>Empresa</strong>
+                        <span>Datos fiscales, contador, ubicación GPS</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+                    </svg>
+                </a>
+
+                <a href="/config/facturacion" class="config-card">
+                    <div class="config-icon ci-violet">📄</div>
+                    <div class="config-info">
+                        <strong>Facturación Electrónica</strong>
+                        <span>Proveedor, SOL, certificado digital, series</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+                    </svg>
+                </a>
+
+                <a href="/config/impuestos" class="config-card">
+                    <div class="config-icon ci-orange">📊</div>
+                    <div class="config-info">
+                        <strong>Impuestos</strong>
+                        <span>IGV, ISC, retención, pagos a cuenta</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+                    </svg>
+                </a>
+
+                <a href="/config/puntos-venta" class="config-card">
+                    <div class="config-icon ci-green">🖥️</div>
+                    <div class="config-info">
+                        <strong>Puntos de Venta</strong>
+                        <span>Cajas, modos, impresoras, GPS</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+                    </svg>
+                </a>
+
+                <a href="/config/listas-precio" class="config-card">
+                    <div class="config-icon ci-cyan">💰</div>
+                    <div class="config-info">
+                        <strong>Listas de Precios</strong>
+                        <span>Minorista, mayorista, distribuidor, escalonados</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+                    </svg>
+                </a>
+
+                <a href="/config/cobros" class="config-card">
+                    <div class="config-icon ci-violet">💳</div>
+                    <div class="config-info">
+                        <strong>Medios de Cobro</strong>
+                        <span>Cuentas bancarias, Yape, Plin, tarjetas</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+                    </svg>
+                </a>
+
+                <a href="/config/almacenes" class="config-card">
+                    <div class="config-icon ci-green">🏭</div>
+                    <div class="config-info">
+                        <strong>Almacenes</strong>
+                        <span>Locales, depósitos, consignación</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+                    </svg>
+                </a>
+
+                <a href="/config/personal" class="config-card">
+                    <div class="config-icon ci-orange">👥</div>
+                    <div class="config-info">
+                        <strong>Personal y Planillas</strong>
+                        <span>Trabajadores, sueldos, AFP, régimen laboral</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+                    </svg>
+                </a>
+
+                <a href="/config/integraciones" class="config-card">
+                    <div class="config-icon ci-cyan">🔌</div>
+                    <div class="config-info">
+                        <strong>Integraciones</strong>
+                        <span>SUNAT, WhatsApp, OpenAI, pasarelas de pago</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+                    </svg>
+                </a>
+
+                <a href="/config/responsables" class="config-card">
+                    <div class="config-icon ci-cyan">👤</div>
+                    <div class="config-info">
+                        <strong>Responsables Especiales</strong>
+                        <span>Rep. legal, administradores, permisos y alertas</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+                    </svg>
+                </a>
+
+                <a href="/config/tipos-cliente" class="config-card">
+                    <div class="config-icon ci-green">🏪</div>
+                    <div class="config-info">
+                        <strong>Tipos de Cliente</strong>
+                        <span>Bodega, mayorista, distribuidor — precios y credito</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+                    </svg>
+                </a>
+
+                <a href="/config/preferencias" class="config-card">
+                    <div class="config-icon ci-violet">⚙️</div>
+                    <div class="config-info">
+                        <strong>Preferencias</strong>
+                        <span>Tema, notificaciones, sonidos, decimales</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+                    </svg>
+                </a>
+
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

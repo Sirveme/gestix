@@ -1,0 +1,55 @@
+{% extends "base.html" %}
+{% block title %}Permisos — {{ usuario.nombre_completo }} — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/usuarios/" class="page-back">&larr; Usuarios</a>
+                <h1>Permisos: {{ usuario.nombre_completo }}</h1>
+                <span class="page-sub">
+                    Rol base: <strong>{{ usuario.rol.nombre if usuario.rol else 'Sin rol' }}</strong>
+                    — Los cambios aqui son adicionales/excepciones al rol.
+                </span>
+            </div>
+
+            <form method="post" action="/usuarios/{{ usuario.id }}/permisos">
+                {% for modulo, acciones in modulos.items() %}
+                <div class="form-section" style="margin-bottom:1rem">
+                    <h3 class="section-title" style="text-transform:capitalize">
+                        {{ modulo }}
+                    </h3>
+                    <div class="permisos-acciones-grid">
+                        {% for item in acciones %}
+                        <label class="permiso-accion {% if item.en_rol %}perm-del-rol{% endif %} {% if item.activo %}perm-activo{% endif %}">
+                            <input type="checkbox"
+                                   name="perm_{{ item.accion.id }}"
+                                   {% if item.activo %}checked{% endif %}>
+                            <div class="permiso-accion-info">
+                                <span class="permiso-nombre">{{ item.accion.nombre }}</span>
+                                <span class="permiso-codigo">{{ item.accion.codigo }}</span>
+                                {% if item.en_rol %}
+                                <span class="permiso-origen">Del rol</span>
+                                {% elif item.es_extra and item.activo %}
+                                <span class="permiso-origen permiso-extra">Adicional</span>
+                                {% elif item.es_extra and not item.activo %}
+                                <span class="permiso-origen permiso-removido">Removido</span>
+                                {% endif %}
+                            </div>
+                        </label>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+
+                <div class="form-actions">
+                    <a href="/usuarios/" class="btn-secondary">Cancelar</a>
+                    <button type="submit" class="btn-primary">Guardar permisos</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+{% endblock %}

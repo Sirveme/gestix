@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Pedido {{ pedido.codigo }} — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <a href="/ventas/pedidos" class="page-back">&larr; Pedidos</a>
+                    <h1>{{ pedido.codigo }}</h1>
+                </div>
+                <span class="badge {% if pedido.estado == 'facturado' %}badge-ok{% elif pedido.estado == 'confirmado' %}badge-warn{% else %}badge-off{% endif %}">
+                    {{ pedido.estado }}
+                </span>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem">
+                <div class="form-section">
+                    <h3 class="section-title">Datos del pedido</h3>
+                    <table class="data-table">
+                        <tr><td>Fecha</td><td>{{ pedido.fecha }}</td></tr>
+                        <tr><td>Cliente</td><td>{{ pedido.nombre_cliente or 'Clientes varios' }}</td></tr>
+                        <tr><td>RUC/DNI</td><td>{{ pedido.ruc_dni or '—' }}</td></tr>
+                        <tr><td>Medio pago</td><td>{{ pedido.medio_pago }}</td></tr>
+                        <tr><td>Comprobante</td><td>
+                            {% if pedido.serie_comprobante %}
+                            {{ pedido.serie_comprobante }}-{{ pedido.numero_comprobante }}
+                            {% else %}Ticket{% endif %}
+                        </td></tr>
+                        {% if pedido.estado_cpe %}
+                        <tr><td>Estado CPE</td><td>{{ pedido.estado_cpe }}</td></tr>
+                        {% endif %}
+                    </table>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">Totales</h3>
+                    <table class="data-table">
+                        <tr><td>Subtotal</td><td>S/ {{ "%.2f"|format(pedido.subtotal) }}</td></tr>
+                        <tr><td>IGV</td><td>S/ {{ "%.2f"|format(pedido.igv) }}</td></tr>
+                        <tr><td><strong>Total</strong></td><td><strong>S/ {{ "%.2f"|format(pedido.total) }}</strong></td></tr>
+                        <tr><td>Pagado</td><td>S/ {{ "%.2f"|format(pedido.monto_pagado) }}</td></tr>
+                        <tr><td>Vuelto</td><td>S/ {{ "%.2f"|format(pedido.vuelto) }}</td></tr>
+                    </table>
+                </div>
+
+                <div class="form-section" style="grid-column:1/-1">
+                    <h3 class="section-title">Items</h3>
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Producto</th><th>Cantidad</th><th>Precio unit.</th><th>IGV</th><th>Total</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td><strong>{{ item.nombre_producto }}</strong><br><small>{{ item.codigo_producto }}</small></td>
+                                <td>{{ "%.3f"|format(item.cantidad) }} {{ item.unidad }}</td>
+                                <td>S/ {{ "%.4f"|format(item.precio_unitario) }}</td>
+                                <td>S/ {{ "%.2f"|format(item.igv) }}</td>
+                                <td><strong>S/ {{ "%.2f"|format(item.total) }}</strong></td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

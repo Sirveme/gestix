@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Usuarios — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:center">
+                <div>
+                    <h1>Usuarios</h1>
+                    <span class="page-sub">Gestiona los usuarios y sus permisos</span>
+                </div>
+                <div style="display:flex;gap:0.75rem">
+                    <a href="/usuarios/roles" class="btn-secondary">Roles</a>
+                    <a href="/usuarios/nuevo" class="btn-primary">+ Nuevo usuario</a>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Ultimo acceso</th><th>Estado</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for u in usuarios %}
+                        <tr>
+                            <td><code>{{ u.usuario }}</code></td>
+                            <td>{{ u.nombre_completo }}</td>
+                            <td>
+                                {% if u.rol %}
+                                <span class="badge {% if u.rol.es_admin %}badge-warn{% else %}badge-ok{% endif %}">
+                                    {{ u.rol.nombre }}
+                                </span>
+                                {% else %}&mdash;{% endif %}
+                            </td>
+                            <td>{{ u.ultimo_acceso.strftime('%d/%m %H:%M') if u.ultimo_acceso else '&mdash;' }}</td>
+                            <td>
+                                <span class="badge {% if u.activo %}badge-ok{% else %}badge-off{% endif %}">
+                                    {% if u.activo %}Activo{% else %}Inactivo{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="/usuarios/{{ u.id }}/permisos" class="btn-icon" title="Permisos">P</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="table-empty">No hay usuarios registrados</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

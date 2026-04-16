@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block title %}Personal — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            {% if toast %}<div class="toast toast-{{ toast_tipo }}" id="toast">{{ toast }}</div>{% endif %}
+            <div class="page-header">
+                <a href="/config" class="page-back">← Configuración</a>
+                <h1>Personal y Planillas</h1>
+            </div>
+
+            <div class="table-wrap" style="margin-bottom:1.5rem">
+                <table class="data-table">
+                    <thead><tr><th>Trabajador</th><th>DNI</th><th>Cargo</th><th>Sueldo</th><th>Pensión</th><th>Estado</th></tr></thead>
+                    <tbody>
+                        {% for t in trabajadores %}
+                        <tr>
+                            <td><strong>{{ t.apellidos }}, {{ t.nombres }}</strong></td>
+                            <td>{{ t.dni }}</td>
+                            <td>{{ t.cargo or '—' }}</td>
+                            <td>S/ {{ "%.2f"|format(t.sueldo_base or 0) }}</td>
+                            <td>{{ (t.sistema_pension or '').upper() }} {{ t.afp_nombre or '' }}</td>
+                            <td><span class="badge {% if t.activo %}badge-ok{% else %}badge-off{% endif %}">{% if t.activo %}Activo{% else %}Cesado{% endif %}</span></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="table-empty">No hay trabajadores registrados</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <form hx-post="/config/personal" hx-target="body" hx-swap="none"
+                  method="post" action="/config/personal">
+                <div class="form-section">
+                    <h3 class="section-title">Nuevo Trabajador</h3>
+                    <div class="form-grid">
+                        <div class="field"><label>DNI</label>
+                            <div class="input-group">
+                                <input type="text" name="dni" maxlength="8" required>
+                                <button type="button" class="input-btn">🔍</button>
+                            </div>
+                        </div>
+                        <div class="field"><label>Nombres</label><input type="text" name="nombres" required></div>
+                        <div class="field"><label>Apellidos</label><input type="text" name="apellidos" required></div>
+                        <div class="field"><label>Cargo</label><input type="text" name="cargo"></div>
+                        <div class="field"><label>Área</label><input type="text" name="area"></div>
+                        <div class="field"><label>Régimen laboral</label>
+                            <select name="id_regimen" class="field-select">
+                                {% for r in regimenes %}
+                                <option value="{{ r.id }}">{{ r.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field"><label>Tipo contrato</label>
+                            <select name="tipo_contrato" class="field-select">
+                                <option value="indefinido">Indefinido</option>
+                                <option value="plazo_fijo">Plazo fijo</option>
+                                <option value="practicas">Prácticas</option>
+                            </select>
+                        </div>
+                        <div class="field"><label>Fecha ingreso</label><input type="date" name="fecha_ingreso"></div>
+                        <div class="field"><label>Sueldo base (S/)</label><input type="number" name="sueldo_base" step="0.01" value="1025"></div>
+                        <div class="field"><label>Sistema pensión</label>
+                            <select name="sistema_pension" class="field-select">
+                                <option value="onp">ONP</option>
+                                <option value="afp">AFP</option>
+                            </select>
+                        </div>
+                        <div class="field"><label>AFP</label><input type="text" name="afp_nombre" placeholder="Integra, Habitat, Prima, Profuturo"></div>
+                        <div class="field">
+                            <div class="toggle-grid">
+                                <label class="toggle-label"><input type="checkbox" name="activo" checked><span>Activo</span></label>
+                                <label class="toggle-label"><input type="checkbox" name="asignacion_familiar"><span>Asig. familiar</span></label>
+                                <label class="toggle-label"><input type="checkbox" name="es_vendedor"><span>Es vendedor</span></label>
+                                <label class="toggle-label"><input type="checkbox" name="es_cajero"><span>Es cajero</span></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar trabajador</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+<script>const toast=document.getElementById('toast');if(toast)setTimeout(()=>toast.style.opacity='0',3000);</script>
+{% endblock %}

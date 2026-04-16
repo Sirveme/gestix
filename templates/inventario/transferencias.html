@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+{% block title %}Transferencias &mdash; Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+
+            <div class="page-header">
+                <a href="/inventario/" class="page-back">&larr; Inventario</a>
+                <div>
+                    <h1 class="page-title">Transferencias</h1>
+                    <p class="page-sub">Movimientos de mercaderia entre almacenes</p>
+                </div>
+                <div style="margin-left:auto;">
+                    <a href="/inventario/transferencias/nueva/" class="btn-primary">+ Nueva Transferencia</a>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <form method="get" style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+                    <div class="field">
+                        <label for="origen">Almacen Origen</label>
+                        <select name="origen" id="origen" class="field-select">
+                            <option value="">Todos</option>
+                            {% for alm in almacenes %}
+                            <option value="{{ alm.id }}" {% if request.query_params.get('origen') == alm.id|string %}selected{% endif %}>
+                                {{ alm.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="destino">Almacen Destino</label>
+                        <select name="destino" id="destino" class="field-select">
+                            <option value="">Todos</option>
+                            {% for alm in almacenes %}
+                            <option value="{{ alm.id }}" {% if request.query_params.get('destino') == alm.id|string %}selected{% endif %}>
+                                {{ alm.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="estado">Estado</label>
+                        <select name="estado" id="estado" class="field-select">
+                            <option value="">Todos los estados</option>
+                            <option value="BORRADOR" {% if request.query_params.get('estado') == 'BORRADOR' %}selected{% endif %}>Borrador</option>
+                            <option value="EN_TRANSITO" {% if request.query_params.get('estado') == 'EN_TRANSITO' %}selected{% endif %}>En Transito</option>
+                            <option value="RECIBIDO" {% if request.query_params.get('estado') == 'RECIBIDO' %}selected{% endif %}>Recibido</option>
+                            <option value="ANULADO" {% if request.query_params.get('estado') == 'ANULADO' %}selected{% endif %}>Anulado</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <button type="submit" class="btn-primary">Filtrar</button>
+                        <a href="/inventario/transferencias/" class="btn-secondary" style="margin-left:.5rem;">Limpiar</a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-wrap">
+                {% if transferencias %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Codigo</th>
+                            <th>Origen</th>
+                            <th></th>
+                            <th>Destino</th>
+                            <th>Estado</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for trn in transferencias %}
+                        <tr>
+                            <td><code>{{ trn.codigo }}</code></td>
+                            <td>{{ trn.origen }}</td>
+                            <td style="text-align:center; color:#9ca3af;">&rarr;</td>
+                            <td>{{ trn.destino }}</td>
+                            <td>
+                                {% if trn.estado == 'BORRADOR' %}
+                                    <span class="badge badge-off">Borrador</span>
+                                {% elif trn.estado == 'EN_TRANSITO' %}
+                                    <span class="badge badge-warn">En Transito</span>
+                                {% elif trn.estado == 'RECIBIDO' %}
+                                    <span class="badge badge-ok">Recibido</span>
+                                {% elif trn.estado == 'ANULADO' %}
+                                    <span class="badge">Anulado</span>
+                                {% else %}
+                                    <span class="badge">{{ trn.estado }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ trn.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <a href="/inventario/transferencias/{{ trn.id }}/" class="btn-icon">
+                                    Ver &rarr;
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="table-empty">
+                    No hay transferencias registradas.
+                    <a href="/inventario/transferencias/nueva/" class="btn-primary" style="margin-top:1rem; display:inline-block;">
+                        Crear primera transferencia
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+        </main>
+    </div>
+</div>
+{% endblock %}

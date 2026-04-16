@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Contabilidad — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <h1>Contabilidad</h1>
+                    <span class="page-sub">Periodo: {{ periodo }}</span>
+                </div>
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+                    <a href="/contabilidad/scan" class="btn-primary">
+                        SCAN Diagnostico
+                    </a>
+                </div>
+            </div>
+
+            {% if diagnostico %}
+            <div class="scan-semaforo-bar">
+                <div class="semaforo-titulo">
+                    Ultimo diagnostico: {{ diagnostico.fecha_scan.strftime('%d/%m/%Y %H:%M') }}
+                </div>
+                <div class="semaforo-areas">
+                    {% for area, estado in [
+                        ('Ventas', diagnostico.estado_ventas),
+                        ('Compras', diagnostico.estado_compras),
+                        ('Tributario', diagnostico.estado_tributario),
+                        ('Bancario', diagnostico.estado_bancario),
+                        ('Inventario', diagnostico.estado_inventario),
+                    ] %}
+                    <div class="semaforo-area semaforo-{{ estado }}">
+                        <span class="semaforo-dot"></span>
+                        {{ area }}
+                    </div>
+                    {% endfor %}
+                </div>
+                <a href="/contabilidad/scan/{{ diagnostico.id }}" class="btn-secondary" style="flex-shrink:0">
+                    Ver detalle
+                </a>
+            </div>
+            {% else %}
+            <div class="alerta-nota-mercaderia" style="border-color:rgba(0,212,255,0.3);background:rgba(0,212,255,0.05)">
+                <span>?</span>
+                <div>
+                    <strong style="color:var(--cyan)">Sin diagnostico para este periodo</strong>
+                    <p>Ejecuta el SCAN para detectar inconsistencias y pendientes.</p>
+                </div>
+                <a href="/contabilidad/scan" class="btn-primary" style="flex-shrink:0">Ejecutar SCAN</a>
+            </div>
+            {% endif %}
+
+            {% if declaracion %}
+            <div class="form-section" style="margin-bottom:1.25rem">
+                <h3 class="section-title">PDT 621 — {{ periodo }}</h3>
+                <div class="kpi-grid">
+                    <div class="kpi-card">
+                        <div class="kpi-icon kpi-cyan">IGV+</div>
+                        <div class="kpi-data">
+                            <span class="kpi-value">S/ {{ "%.2f"|format(declaracion.igv_ventas) }}</span>
+                            <span class="kpi-label">IGV ventas</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon kpi-violet">CF</div>
+                        <div class="kpi-data">
+                            <span class="kpi-value">S/ {{ "%.2f"|format(declaracion.igv_compras) }}</span>
+                            <span class="kpi-label">Credito fiscal</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon kpi-orange">IGV</div>
+                        <div class="kpi-data">
+                            <span class="kpi-value">S/ {{ "%.2f"|format(declaracion.igv_a_pagar) }}</span>
+                            <span class="kpi-label">IGV a pagar</span>
+                        </div>
+                    </div>
+                    <div class="kpi-card">
+                        <div class="kpi-icon kpi-green">R3</div>
+                        <div class="kpi-data">
+                            <span class="kpi-value">S/ {{ "%.2f"|format(declaracion.renta_a_pagar) }}</span>
+                            <span class="kpi-label">Renta 3ra a pagar</span>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-top:1rem;display:flex;gap:0.75rem;flex-wrap:wrap">
+                    <span class="badge {% if declaracion.estado == 'pagado' %}badge-ok{% elif declaracion.estado == 'presentado' %}badge-warn{% else %}badge-off{% endif %}">
+                        {{ declaracion.estado.upper() }}
+                    </span>
+                    {% if declaracion.fecha_vencimiento %}
+                    <span style="font-size:0.85rem;color:var(--text3)">
+                        Vence: {{ declaracion.fecha_vencimiento.strftime('%d/%m/%Y') }}
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+            {% else %}
+            <div class="form-section" style="margin-bottom:1.25rem">
+                <h3 class="section-title">PDT 621 — {{ periodo }}</h3>
+                <p style="color:var(--text3);font-size:0.875rem;margin-bottom:1rem">
+                    Declaracion no calculada para este periodo.
+                </p>
+                <button class="btn-secondary" onclick="calcularDeclaracion('{{ periodo }}')">
+                    Calcular PDT 621
+                </button>
+            </div>
+            {% endif %}
+
+            <div class="config-grid">
+                <a href="/contabilidad/scan" class="config-card">
+                    <div class="config-icon">SCN</div>
+                    <div class="config-info">
+                        <strong>SCAN Diagnostico</strong>
+                        <span>Que falta, quien debe darlo, semaforo</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/></svg>
+                </a>
+                <a href="/contabilidad/declaraciones" class="config-card">
+                    <div class="config-icon">DEC</div>
+                    <div class="config-info">
+                        <strong>Declaraciones</strong>
+                        <span>PDT 621, calculo y seguimiento</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/></svg>
+                </a>
+                <a href="/contabilidad/asientos" class="config-card">
+                    <div class="config-icon">LIB</div>
+                    <div class="config-info">
+                        <strong>Libro Diario</strong>
+                        <span>Asientos automaticos y manuales</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/></svg>
+                </a>
+                <a href="/contabilidad/sire" class="config-card">
+                    <div class="config-icon">SIR</div>
+                    <div class="config-info">
+                        <strong>Cruce SIRE</strong>
+                        <span>Gestix vs SUNAT — diferencias</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/></svg>
+                </a>
+                <a href="/contabilidad/banco" class="config-card">
+                    <div class="config-icon">BNC</div>
+                    <div class="config-info">
+                        <strong>Conciliacion Bancaria</strong>
+                        <span>Notificaciones vs movimientos Gestix</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/></svg>
+                </a>
+                <a href="/contabilidad/cuentas" class="config-card">
+                    <div class="config-icon">PCG</div>
+                    <div class="config-info">
+                        <strong>Plan de Cuentas PCGE</strong>
+                        <span>Cuentas con alias personalizados</span>
+                    </div>
+                    <svg class="config-arrow" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/></svg>
+                </a>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+async function calcularDeclaracion(periodo) {
+    const resp = await fetch('/contabilidad/declaraciones/calcular', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({periodo}),
+    });
+    const r = await resp.json();
+    if (r.ok) location.reload();
+}
+</script>
+{% endblock %}

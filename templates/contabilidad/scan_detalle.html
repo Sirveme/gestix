@@ -1,0 +1,97 @@
+{% extends "base.html" %}
+{% block title %}Diagnostico {{ diagnostico.periodo }} — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header" style="display:flex;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <a href="/contabilidad/scan" class="page-back">&larr; SCAN</a>
+                    <h1>Diagnostico {{ diagnostico.periodo }}</h1>
+                    <span class="page-sub">{{ diagnostico.fecha_scan.strftime('%d/%m/%Y %H:%M') }}</span>
+                </div>
+                <span class="semaforo-badge semaforo-{{ diagnostico.estado_global }}" style="font-size:1rem;padding:0.5rem 1rem">
+                    {% if diagnostico.estado_global == 'verde' %}Todo en orden
+                    {% elif diagnostico.estado_global == 'amarillo' %}Requiere atencion
+                    {% else %}Accion urgente requerida{% endif %}
+                </span>
+            </div>
+
+            <div class="scan-areas-grid" style="margin-bottom:1.5rem">
+                {% for area, estado in [
+                    ('Ventas', diagnostico.estado_ventas),
+                    ('Compras', diagnostico.estado_compras),
+                    ('Tributario', diagnostico.estado_tributario),
+                    ('Bancario', diagnostico.estado_bancario),
+                    ('Inventario', diagnostico.estado_inventario),
+                ] %}
+                <div class="scan-area-card semaforo-bg-{{ estado }}">
+                    <span class="scan-area-dot semaforo-{{ estado }}"></span>
+                    <span class="scan-area-nombre">{{ area }}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if not hallazgos_por_area %}
+            <div class="coming-soon-card" style="background:rgba(0,255,136,0.05);border-color:rgba(0,255,136,0.2)">
+                <div class="cs-icon">OK</div>
+                <h3 style="color:var(--green)">Sin hallazgos</h3>
+                <p>Todo esta en orden para el periodo {{ diagnostico.periodo }}</p>
+            </div>
+            {% else %}
+            {% for area, hallazgos in hallazgos_por_area.items() %}
+            <div class="form-section" style="margin-bottom:1rem">
+                <h3 class="section-title" style="text-transform:capitalize">
+                    {{ area }}
+                    {% set rojos = hallazgos|selectattr('severidad','eq','rojo')|list %}
+                    {% if rojos %}
+                    <span class="badge" style="background:rgba(255,68,68,0.15);color:var(--red)">{{ rojos|length }} rojo(s)</span>
+                    {% endif %}
+                </h3>
+                {% for h in hallazgos %}
+                <div class="hallazgo-card hallazgo-{{ h.severidad }}">
+                    <div class="hallazgo-header">
+                        <span class="hallazgo-icon">
+                            {% if h.severidad == 'rojo' %}!!
+                            {% elif h.severidad == 'amarillo' %}!
+                            {% else %}i{% endif %}
+                        </span>
+                        <strong class="hallazgo-titulo">{{ h.titulo }}</strong>
+                        <code class="hallazgo-codigo">{{ h.codigo }}</code>
+                    </div>
+                    <div class="hallazgo-detalle">
+                        <div class="hallazgo-fila">
+                            <span class="hallazgo-etiqueta">Que falta?</span>
+                            <span>{{ h.que_falta }}</span>
+                        </div>
+                        <div class="hallazgo-fila">
+                            <span class="hallazgo-etiqueta">Como conseguirlo?</span>
+                            <span>{{ h.como_conseguir }}</span>
+                        </div>
+                        <div class="hallazgo-fila">
+                            <span class="hallazgo-etiqueta">Quien debe darlo?</span>
+                            <span>{{ h.quien_debe_dar }}</span>
+                        </div>
+                        <div class="hallazgo-fila">
+                            <span class="hallazgo-etiqueta">Quien es responsable?</span>
+                            <span>{{ h.quien_es_responsable }}</span>
+                        </div>
+                    </div>
+                    {% if h.url_accion %}
+                    <div style="margin-top:0.75rem">
+                        <a href="{{ h.url_accion }}" class="btn-secondary" style="font-size:0.8rem;padding:0.4rem 0.85rem">
+                            Ir a resolver &rarr;
+                        </a>
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            {% endfor %}
+            {% endif %}
+        </main>
+    </div>
+</div>
+{% endblock %}

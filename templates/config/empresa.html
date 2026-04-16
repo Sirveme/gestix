@@ -1,0 +1,149 @@
+{% extends "base.html" %}
+{% block title %}Empresa — Configuración Gestix{% endblock %}
+
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+
+            {% if toast %}
+            <div class="toast toast-{{ toast_tipo }}" id="toast">{{ toast }}</div>
+            {% endif %}
+
+            <div class="page-header">
+                <a href="/config" class="page-back">← Configuración</a>
+                <h1>Datos de la Empresa</h1>
+            </div>
+
+            <form method="post" action="/config/empresa"
+                  hx-post="/config/empresa"
+                  hx-target="#form-empresa"
+                  hx-swap="outerHTML"
+                  id="form-empresa">
+
+                <!-- Datos fiscales -->
+                <div class="form-section">
+                    <h3 class="section-title">Datos Fiscales</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>RUC</label>
+                            <div class="input-group">
+                                <input type="text" name="ruc" value="{{ empresa.ruc if empresa else '' }}"
+                                       maxlength="11" placeholder="20xxxxxxxxx">
+                                <button type="button" class="input-btn" title="Consultar SUNAT">🔍</button>
+                            </div>
+                        </div>
+                        <div class="field field-wide">
+                            <label>Razón Social</label>
+                            <input type="text" name="razon_social" value="{{ empresa.razon_social if empresa else '' }}">
+                        </div>
+                        <div class="field field-wide">
+                            <label>Nombre Comercial</label>
+                            <input type="text" name="nombre_comercial" value="{{ empresa.nombre_comercial if empresa else '' }}">
+                        </div>
+                        <div class="field field-wide">
+                            <label>Dirección</label>
+                            <input type="text" name="direccion" value="{{ empresa.direccion if empresa else '' }}">
+                        </div>
+                        <div class="field">
+                            <label>Teléfono</label>
+                            <input type="text" name="telefono" value="{{ empresa.telefono if empresa else '' }}">
+                        </div>
+                        <div class="field">
+                            <label>Correo</label>
+                            <input type="email" name="correo" value="{{ empresa.correo if empresa else '' }}">
+                        </div>
+                        <div class="field">
+                            <label>Actividad Económica</label>
+                            <input type="text" name="actividad_economica" value="{{ empresa.actividad_economica if empresa else '' }}">
+                        </div>
+                        <div class="field">
+                            <label>Código CIIU</label>
+                            <input type="text" name="ciiu" value="{{ empresa.ciiu if empresa else '' }}" maxlength="10">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Contador -->
+                <div class="form-section">
+                    <h3 class="section-title">Contador</h3>
+                    <div class="form-grid">
+                        <div class="field field-wide">
+                            <label>Nombre completo</label>
+                            <input type="text" name="contador_nombre" value="{{ empresa.contador_nombre if empresa else '' }}">
+                        </div>
+                        <div class="field">
+                            <label>DNI</label>
+                            <div class="input-group">
+                                <input type="text" name="contador_dni" value="{{ empresa.contador_dni if empresa else '' }}" maxlength="8">
+                                <button type="button" class="input-btn" title="Consultar RENIEC">🔍</button>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>N° Colegiatura</label>
+                            <input type="text" name="contador_colegiatura" value="{{ empresa.contador_colegiatura if empresa else '' }}">
+                        </div>
+                        <div class="field">
+                            <label>Correo</label>
+                            <input type="email" name="contador_correo" value="{{ empresa.contador_correo if empresa else '' }}">
+                        </div>
+                        <div class="field">
+                            <label>Celular</label>
+                            <input type="text" name="contador_celular" value="{{ empresa.contador_celular if empresa else '' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Geolocalización -->
+                <div class="form-section">
+                    <h3 class="section-title">Ubicación y Radio de Acción</h3>
+                    <p class="section-desc">Define la ubicación del negocio y el radio permitido para acceso desde dispositivos móviles.</p>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Latitud</label>
+                            <input type="number" step="any" name="gps_lat"
+                                   value="{{ empresa.gps_lat if empresa else '' }}" id="gps_lat">
+                        </div>
+                        <div class="field">
+                            <label>Longitud</label>
+                            <input type="number" step="any" name="gps_lon"
+                                   value="{{ empresa.gps_lon if empresa else '' }}" id="gps_lon">
+                        </div>
+                        <div class="field">
+                            <label>Radio permitido (metros)</label>
+                            <input type="number" name="gps_radio_metros"
+                                   value="{{ empresa.gps_radio_metros if empresa else 500 }}">
+                        </div>
+                        <div class="field" style="align-self:end">
+                            <button type="button" class="btn-secondary" onclick="obtenerUbicacion()">
+                                📍 Usar mi ubicación actual
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar cambios</button>
+                </div>
+
+            </form>
+        </main>
+    </div>
+</div>
+
+<script>
+function obtenerUbicacion() {
+    if (!navigator.geolocation) return alert('GPS no disponible');
+    navigator.geolocation.getCurrentPosition(pos => {
+        document.getElementById('gps_lat').value = pos.coords.latitude.toFixed(7);
+        document.getElementById('gps_lon').value = pos.coords.longitude.toFixed(7);
+    }, () => alert('No se pudo obtener la ubicación'));
+}
+
+// Auto-ocultar toast
+const toast = document.getElementById('toast');
+if (toast) setTimeout(() => toast.style.opacity = '0', 3000);
+</script>
+{% endblock %}

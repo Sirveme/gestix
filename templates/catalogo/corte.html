@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Corte de Inventario — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <h1>Corte de Inventario</h1>
+                <span class="page-sub">Valorizado a fecha específica — instantáneo</span>
+            </div>
+
+            <form method="get" action="/catalogo/corte-inventario" class="form-section" style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
+                <div class="field">
+                    <label>Fecha de corte</label>
+                    <input type="date" name="fecha" value="{{ fecha_corte }}" required>
+                </div>
+                <div class="field">
+                    <label>Almacén</label>
+                    <input type="number" name="id_almacen" value="{{ id_almacen or '' }}" placeholder="ID almacén">
+                </div>
+                <button type="submit" class="btn-primary">Generar corte</button>
+            </form>
+
+            {% if resultados %}
+            <div class="kpi-grid" style="margin:1.5rem 0">
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-cyan">📦</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">{{ resultados|length }}</span>
+                        <span class="kpi-label">Productos en stock</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-green">💰</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">S/ {{ "%.2f"|format(total_valor) }}</span>
+                        <span class="kpi-label">Valor total inventario</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Producto</th>
+                            <th style="text-align:right">Stock</th>
+                            <th style="text-align:right">Costo unit.</th>
+                            <th style="text-align:right">Valor total</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in resultados %}
+                        <tr>
+                            <td>Producto {{ r.id_producto }}</td>
+                            <td style="text-align:right">{{ "%.3f"|format(r.stock) }}</td>
+                            <td style="text-align:right">S/ {{ "%.4f"|format(r.costo_unitario) }}</td>
+                            <td style="text-align:right;color:var(--cyan);font-weight:700">S/ {{ "%.2f"|format(r.valor_total) }}</td>
+                        </tr>
+                        {% endfor %}
+                        <tr style="border-top:2px solid var(--border2)">
+                            <td colspan="3" style="text-align:right;font-weight:700;color:var(--text)">TOTAL</td>
+                            <td style="text-align:right;font-family:'Syne',sans-serif;font-size:1.1rem;color:var(--green)">
+                                S/ {{ "%.2f"|format(total_valor) }}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            {% elif id_almacen %}
+            <div class="coming-soon-card">
+                <div class="cs-icon">📭</div>
+                <h3>Sin movimientos hasta {{ fecha_corte }}</h3>
+                <p>No hay registros de kardex para ese almacén en esa fecha.</p>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+{% endblock %}

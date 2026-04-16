@@ -1,0 +1,35 @@
+{% if productos %}
+<div class="table-wrap">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Código</th>
+                <th>Producto</th>
+                <th>Unidad</th>
+                <th style="text-align:right">Precio</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for p in productos %}
+            <tr>
+                <td><code class="codigo-chip">{{ p.codigo or '—' }}</code></td>
+                <td>
+                    <strong>{{ p.nombre }}</strong>
+                    {% if p.tipo != 'producto' %}<span class="badge badge-off" style="margin-left:0.4rem">{{ p.tipo }}</span>{% endif %}
+                </td>
+                <td>{{ p.unidad.abreviado if p.unidad else '—' }}</td>
+                <td style="text-align:right;color:var(--cyan);font-family:'Syne',sans-serif;font-weight:700">
+                    S/ {{ "%.2f"|format(p.precio_venta or 0) }}
+                </td>
+                <td>
+                    <a href="/catalogo/{{ p.id }}" class="btn-icon" title="Ver / Editar">→</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% elif q %}
+<div class="search-noresult">Sin resultados para "{{ q }}"</div>
+{% endif %}

@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+{% block title %}Facturación Electrónica — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            {% if toast %}<div class="toast toast-{{ toast_tipo }}" id="toast">{{ toast }}</div>{% endif %}
+            <div class="page-header">
+                <a href="/config" class="page-back">← Configuración</a>
+                <h1>Facturación Electrónica</h1>
+            </div>
+
+            <form hx-post="/config/facturacion" hx-target="body" hx-swap="none"
+                  method="post" action="/config/facturacion">
+
+                <div class="form-section">
+                    <h3 class="section-title">Proveedor de Facturación</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Proveedor</label>
+                            <select name="proveedor" class="field-select">
+                                {% for opt in [('facturalo.pro','Facturalo.pro (recomendado)'),
+                                               ('nubefact','Nubefact'),('efact','eFact'),
+                                               ('sunat_direct','SEE Contribuyente'),('otro','Otro')] %}
+                                <option value="{{ opt[0] }}" {% if fact and fact.proveedor == opt[0] %}selected{% endif %}>
+                                    {{ opt[1] }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field field-wide">
+                            <label>URL de la API</label>
+                            <input type="text" name="api_url" value="{{ fact.api_url if fact else '' }}"
+                                   placeholder="https://api.facturalo.pro/v1">
+                        </div>
+                        <div class="field">
+                            <label>API Key</label>
+                            <input type="password" name="api_key" value="{{ fact.api_key if fact else '' }}">
+                        </div>
+                        <div class="field">
+                            <label>Entorno</label>
+                            <select name="entorno" class="field-select">
+                                <option value="beta" {% if not fact or fact.entorno == 'beta' %}selected{% endif %}>Beta / Pruebas</option>
+                                <option value="produccion" {% if fact and fact.entorno == 'produccion' %}selected{% endif %}>Producción</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label class="toggle-label">
+                                <input type="checkbox" name="activo" {% if fact and fact.activo %}checked{% endif %}>
+                                <span>Facturación electrónica activa</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">Credenciales SOL (SUNAT)</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>RUC</label>
+                            <input type="text" name="sol_ruc" value="{{ fact.sol_ruc if fact else '' }}" maxlength="11">
+                        </div>
+                        <div class="field">
+                            <label>Usuario secundario SOL</label>
+                            <input type="text" name="sol_usuario" value="{{ fact.sol_usuario if fact else '' }}">
+                        </div>
+                        <div class="field">
+                            <label>Clave SOL</label>
+                            <input type="password" name="sol_clave" value="{{ fact.sol_clave if fact else '' }}">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">Certificado Digital</h3>
+                    <p class="section-desc">Sube tu certificado .pfx para firma digital de comprobantes.</p>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Contraseña del certificado</label>
+                            <input type="password" name="cert_password" value="{{ fact.cert_password if fact else '' }}">
+                        </div>
+                        <div class="field">
+                            <label>Vencimiento</label>
+                            <input type="date" name="cert_vencimiento"
+                                   value="{{ fact.cert_vencimiento if fact else '' }}">
+                        </div>
+                        <div class="field field-wide">
+                            <label>Archivo .pfx</label>
+                            <input type="file" name="cert_file" accept=".pfx,.p12">
+                            {% if fact and fact.cert_filename %}
+                            <span class="field-hint">Actual: {{ fact.cert_filename }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar configuración</button>
+                </div>
+            </form>
+
+            <!-- Series de documentos -->
+            <div class="form-section" style="margin-top:1.5rem">
+                <h3 class="section-title">Series de Documentos</h3>
+                <div class="table-wrap">
+                    <table class="data-table" id="series-table">
+                        <thead>
+                            <tr>
+                                <th>Tipo</th><th>Serie</th><th>Correlativo</th><th>Estado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for s in series %}
+                            <tr>
+                                <td>{{ s.tipo_doc_nombre or s.tipo_doc }}</td>
+                                <td><strong>{{ s.serie }}</strong></td>
+                                <td>{{ s.correlativo }}</td>
+                                <td><span class="badge {% if s.activo %}badge-ok{% else %}badge-off{% endif %}">
+                                    {% if s.activo %}Activa{% else %}Inactiva{% endif %}
+                                </span></td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="table-empty">No hay series configuradas</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Agregar serie -->
+                <div class="mini-form" style="margin-top:1rem">
+                    <h4 style="color:var(--text2);font-size:0.85rem;margin-bottom:0.75rem">Agregar serie</h4>
+                    <form hx-post="/config/facturacion/serie"
+                          hx-target="#series-table tbody" hx-swap="innerHTML"
+                          style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:flex-end">
+                        <div class="field" style="flex:1;min-width:140px">
+                            <label>Tipo doc</label>
+                            <select name="tipo_doc" class="field-select">
+                                <option value="01">01 - Factura</option>
+                                <option value="03">03 - Boleta</option>
+                                <option value="07">07 - Nota Crédito</option>
+                                <option value="08">08 - Nota Débito</option>
+                                <option value="09">09 - Guía Remisión</option>
+                            </select>
+                        </div>
+                        <div class="field" style="flex:1;min-width:100px">
+                            <label>Serie</label>
+                            <input type="text" name="serie" maxlength="4" placeholder="F001" style="text-transform:uppercase">
+                        </div>
+                        <div class="field" style="flex:1;min-width:100px">
+                            <label>Desde N°</label>
+                            <input type="number" name="correlativo" value="0" min="0">
+                        </div>
+                        <button type="submit" class="btn-secondary" style="margin-bottom:0">+ Agregar</button>
+                    </form>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+<script>
+const toast = document.getElementById('toast');
+if (toast) setTimeout(() => toast.style.opacity = '0', 3000);
+</script>
+{% endblock %}

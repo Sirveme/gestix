@@ -1,0 +1,203 @@
+{% extends "base.html" %}
+{% block title %}Puntos de Venta — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            {% if toast %}<div class="toast toast-{{ toast_tipo }}" id="toast">{{ toast }}</div>{% endif %}
+            <div class="page-header">
+                <a href="/config" class="page-back">← Configuración</a>
+                <h1>Puntos de Venta</h1>
+            </div>
+
+            <!-- Lista de PVs existentes -->
+            {% if pvs %}
+            <div class="config-grid" style="margin-bottom:1.5rem">
+                {% for pv in pvs %}
+                <div class="config-card" style="cursor:default">
+                    <div class="config-icon">🖥️</div>
+                    <div class="config-info">
+                        <strong>{{ pv.nombre }}</strong>
+                        <span>{{ pv.modo }} · {{ pv.serie_factura or '—' }} / {{ pv.serie_boleta or '—' }}</span>
+                    </div>
+                    <span class="badge {% if pv.activo %}badge-ok{% else %}badge-off{% endif %}">
+                        {% if pv.activo %}Activo{% else %}Inactivo{% endif %}
+                    </span>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Formulario nuevo/editar PV -->
+            <form method="post" action="/config/puntos-venta">
+                <input type="hidden" name="id" value="">
+
+                <div class="form-section">
+                    <h3 class="section-title">Nuevo Punto de Venta</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Nombre</label>
+                            <input type="text" name="nombre" placeholder="Caja Principal" required>
+                        </div>
+                        <div class="field">
+                            <label>Código</label>
+                            <input type="text" name="codigo" placeholder="CAJA01" maxlength="10">
+                        </div>
+                        <div class="field">
+                            <label>Modo de operación</label>
+                            <select name="modo" class="field-select">
+                                <option value="caja_completa">Caja completa</option>
+                                <option value="solo_pedidos">Solo pedidos</option>
+                                <option value="pedidos_con_codigo">Pedidos con código</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Serie Factura</label>
+                            <input type="text" name="serie_factura" maxlength="4" placeholder="F001">
+                        </div>
+                        <div class="field">
+                            <label>Serie Boleta</label>
+                            <input type="text" name="serie_boleta" maxlength="4" placeholder="B001">
+                        </div>
+                        <div class="field">
+                            <label>Descuento máximo (%)</label>
+                            <input type="number" name="descuento_max" value="10" min="0" max="100" step="0.1">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">Comportamiento</h3>
+                    <div class="toggle-grid">
+                        <label class="toggle-label"><input type="checkbox" name="activo" checked><span>Activo</span></label>
+                        <label class="toggle-label"><input type="checkbox" name="requiere_apertura_caja" checked><span>Requiere apertura de caja</span></label>
+                        <label class="toggle-label"><input type="checkbox" name="pin_por_venta"><span>PIN del vendedor por venta</span></label>
+                        <label class="toggle-label"><input type="checkbox" name="venta_sin_stock"><span>Permite venta sin stock</span></label>
+                        <label class="toggle-label"><input type="checkbox" name="permite_descuento" checked><span>Permite descuentos</span></label>
+                        <label class="toggle-label"><input type="checkbox" name="permite_credito" checked><span>Permite ventas al crédito</span></label>
+                        <label class="toggle-label"><input type="checkbox" name="permite_anular_pedido" checked><span>Permite anular pedido</span></label>
+                        <label class="toggle-label"><input type="checkbox" name="permite_anular_venta"><span>Permite anular venta/comprobante</span></label>
+                        <label class="toggle-label"><input type="checkbox" name="requiere_motivo_anulacion" checked><span>Requiere motivo de anulación</span></label>
+                    </div>
+                    <div class="form-grid" style="margin-top:0.75rem">
+                        <div class="field">
+                            <label>Minutos máx. para anular (0 = sin límite)</label>
+                            <input type="number" name="minutos_max_anulacion" value="0" min="0">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Mode explainer -->
+                <div class="mode-explainer" id="mode-explainer">
+                    <div class="mode-opt" data-mode="caja_completa">
+                        <strong>Caja Completa</strong> — El cajero cobra, da vuelto, emite comprobante y registra el pago.
+                        Puede aplicar descuentos y dar crédito según configuración.
+                    </div>
+                    <div class="mode-opt" data-mode="solo_pedidos" style="display:none">
+                        <strong>Solo Pedidos</strong> — El vendedor toma el pedido pero NO cobra.
+                        El cliente paga en caja central. El vendedor no ve montos.
+                    </div>
+                    <div class="mode-opt" data-mode="pedidos_con_codigo" style="display:none">
+                        <strong>Pedidos con Código</strong> — El vendedor toma el pedido y entrega un código al cliente.
+                        El cliente presenta el código en caja para pagar.
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">Impresora Térmica</h3>
+                    <div class="field">
+                        <label>Tipo de impresora</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="impresora_tipo" value="ninguna" checked>
+                                <span>Sin impresora</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="impresora_tipo" value="58mm">
+                                <span>Térmica 58 mm</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="impresora_tipo" value="80mm">
+                                <span>Térmica 80 mm</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="impresora_tipo" value="pdf">
+                                <span>PDF / descarga</span>
+                            </label>
+                        </div>
+                        <span class="field-hint">Las impresoras de 80mm también soportan tickets de 58mm</span>
+                    </div>
+                    <div class="form-grid" style="margin-top:0.75rem">
+                        <div class="field">
+                            <label>IP de la impresora</label>
+                            <input type="text" name="impresora_ip" placeholder="192.168.1.100">
+                        </div>
+                        <div class="field">
+                            <label>Puerto</label>
+                            <input type="number" name="impresora_puerto" value="9100">
+                        </div>
+                        <div class="field">
+                            <label>Ancho (mm)</label>
+                            <input type="number" name="impresora_ancho" value="80">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">Geolocalización para acceso móvil</h3>
+                    <p class="section-desc">Restringe el acceso desde dispositivos móviles a un radio desde este punto.</p>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Latitud</label>
+                            <input type="number" step="any" name="gps_lat" id="pv_lat">
+                        </div>
+                        <div class="field">
+                            <label>Longitud</label>
+                            <input type="number" step="any" name="gps_lon" id="pv_lon">
+                        </div>
+                        <div class="field">
+                            <label>Radio (metros)</label>
+                            <input type="number" name="gps_radio_metros" value="200">
+                        </div>
+                        <div class="field">
+                            <label>Acción fuera de rango</label>
+                            <select name="gps_accion" class="field-select">
+                                <option value="advertir">Advertir</option>
+                                <option value="bloquear">Bloquear acceso</option>
+                                <option value="registrar">Solo registrar</option>
+                            </select>
+                        </div>
+                        <div class="field" style="align-self:end">
+                            <button type="button" class="btn-secondary" onclick="obtenerUbicacionPV()">
+                                📍 Usar mi ubicación
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar punto de venta</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+<script>
+document.querySelector('[name="modo"]').addEventListener('change', function() {
+    document.querySelectorAll('.mode-opt').forEach(el => el.style.display = 'none');
+    const sel = document.querySelector(`.mode-opt[data-mode="${this.value}"]`);
+    if (sel) sel.style.display = 'block';
+});
+function obtenerUbicacionPV() {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(pos => {
+        document.getElementById('pv_lat').value = pos.coords.latitude.toFixed(7);
+        document.getElementById('pv_lon').value = pos.coords.longitude.toFixed(7);
+    });
+}
+const toast = document.getElementById('toast');
+if (toast) setTimeout(() => toast.style.opacity = '0', 3000);
+</script>
+{% endblock %}

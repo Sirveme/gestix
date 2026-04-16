@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}Seleccionar empresa — Gestix{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+    <div class="orb orb-cyan" style="top:-100px;right:-50px;opacity:0.15"></div>
+    <div class="home-grid"></div>
+
+    <div class="selector-box">
+        <div class="auth-logo">
+            <span class="logo-g">G</span>estix
+        </div>
+        <h2 class="selector-title">Hola, <strong>{{ nombre }}</strong></h2>
+        <p class="selector-sub">Selecciona la empresa con la que trabajarás ahora:</p>
+
+        <div class="empresa-list">
+            {% for e in empresas %}
+            <a href="/seleccionar-empresa/confirmar/{{ e.id }}" class="empresa-card">
+                <div class="empresa-info">
+                    <span class="empresa-nombre">{{ e.nombre_comercial or e.razon_social }}</span>
+                    <span class="empresa-ruc">RUC {{ e.ruc }}</span>
+                </div>
+                <div class="empresa-plan plan-{{ e.plan }}">{{ e.plan }}</div>
+                <svg class="empresa-arrow" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M10.293 3.293a1 1 0 011.414 0l6 6a1 1 0 010 1.414l-6 6a1 1 0 01-1.414-1.414L14.586 11H3a1 1 0 110-2h11.586l-4.293-4.293a1 1 0 010-1.414z"/>
+                </svg>
+            </a>
+            {% endfor %}
+        </div>
+
+        <a href="/logout" class="auth-help" style="display:block;text-align:center;margin-top:1.5rem">
+            Cerrar sesión
+        </a>
+    </div>
+</div>
+{% endblock %}

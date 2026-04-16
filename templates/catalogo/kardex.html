@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Kardex — {{ producto.nombre }} — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/catalogo/{{ producto.id }}" class="page-back">← {{ producto.nombre }}</a>
+                <h1>Kardex</h1>
+                <span class="page-sub">{{ producto.codigo or '' }} · Últimos 200 movimientos</span>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Fecha</th>
+                            <th>Tipo</th>
+                            <th>Origen</th>
+                            <th style="text-align:right">Entrada</th>
+                            <th style="text-align:right">Salida</th>
+                            <th style="text-align:right">Saldo</th>
+                            <th style="text-align:right">Costo unit.</th>
+                            <th style="text-align:right">Valor saldo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for m in movimientos %}
+                        <tr>
+                            <td>{{ m.fecha.strftime('%d/%m/%Y') }}</td>
+                            <td><span class="badge {% if m.cantidad_entrada > 0 %}badge-ok{% else %}badge-warn{% endif %}">
+                                {{ m.tipo }}
+                            </span></td>
+                            <td>
+                                {% if m.origen_serie %}{{ m.origen_serie }}-{{ m.origen_numero }}{% else %}—{% endif %}
+                            </td>
+                            <td style="text-align:right;color:var(--green)">
+                                {% if m.cantidad_entrada > 0 %}{{ "%.3f"|format(m.cantidad_entrada) }}{% endif %}
+                            </td>
+                            <td style="text-align:right;color:var(--orange)">
+                                {% if m.cantidad_salida > 0 %}{{ "%.3f"|format(m.cantidad_salida) }}{% endif %}
+                            </td>
+                            <td style="text-align:right;font-weight:700">{{ "%.3f"|format(m.saldo) }}</td>
+                            <td style="text-align:right">S/ {{ "%.4f"|format(m.costo_unitario) }}</td>
+                            <td style="text-align:right;color:var(--cyan)">S/ {{ "%.2f"|format(m.costo_saldo) }}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="8" class="table-empty">Sin movimientos registrados</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

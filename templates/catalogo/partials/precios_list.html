@@ -1,0 +1,19 @@
+<table class="data-table">
+    <thead>
+        <tr><th>Nombre</th><th>Unidad</th><th>Equiv.</th><th>Costo</th><th>Margen</th><th style="text-align:right">Precio venta</th></tr>
+    </thead>
+    <tbody>
+        {% for p in precios %}
+        <tr>
+            <td>{{ p.nombre or '—' }}</td>
+            <td>{{ p.unidad_venta }}</td>
+            <td>{{ p.equivalente }}</td>
+            <td>S/ {{ "%.4f"|format(p.precio_costo or 0) }}</td>
+            <td>{{ p.margen or 0 }}%</td>
+            <td style="text-align:right;color:var(--cyan);font-weight:700">S/ {{ "%.4f"|format(p.precio_venta) }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="table-empty">Sin precios adicionales</td></tr>
+        {% endfor %}
+    </tbody>
+</table>

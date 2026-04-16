@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+{% block title %}Declaraciones — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <a href="/contabilidad/" class="page-back">&larr; Contabilidad</a>
+                    <h1>Declaraciones Tributarias</h1>
+                </div>
+                <button class="btn-primary" onclick="calcularDeclaracion('{{ periodo_actual }}')">
+                    Calcular PDT 621 — {{ periodo_actual }}
+                </button>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Periodo</th><th>Tipo</th><th>Base ventas</th>
+                            <th>IGV ventas</th><th>Credito fiscal</th>
+                            <th>IGV a pagar</th><th>Renta</th>
+                            <th>Vencimiento</th><th>Estado</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for d in declaraciones %}
+                        <tr>
+                            <td><strong>{{ d.periodo }}</strong></td>
+                            <td>{{ d.tipo.upper() }}</td>
+                            <td>S/ {{ "%.2f"|format(d.base_ventas) }}</td>
+                            <td>S/ {{ "%.2f"|format(d.igv_ventas) }}</td>
+                            <td>S/ {{ "%.2f"|format(d.igv_compras) }}</td>
+                            <td><strong>S/ {{ "%.2f"|format(d.igv_a_pagar) }}</strong></td>
+                            <td>S/ {{ "%.2f"|format(d.renta_a_pagar) }}</td>
+                            <td>{{ d.fecha_vencimiento.strftime('%d/%m/%Y') if d.fecha_vencimiento else '—' }}</td>
+                            <td><span class="badge {% if d.estado == 'pagado' %}badge-ok{% elif d.estado == 'presentado' %}badge-warn{% else %}badge-off{% endif %}">{{ d.estado }}</span></td>
+                            <td><button class="btn-icon" onclick="calcularDeclaracion('{{ d.periodo }}')">&#8635;</button></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="10" class="table-empty">Sin declaraciones calculadas</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+<script>
+async function calcularDeclaracion(periodo) {
+    const resp = await fetch('/contabilidad/declaraciones/calcular', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({periodo}),
+    });
+    const r = await resp.json();
+    if (r.ok) location.reload();
+}
+</script>
+{% endblock %}

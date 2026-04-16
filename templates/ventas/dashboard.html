@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Ventas — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <h1>Ventas</h1>
+                    <span class="page-sub">{{ hoy.strftime('%A %d de %B %Y') }}</span>
+                </div>
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+                    <a href="/ventas/pedidos" class="btn-secondary">Ver pedidos</a>
+                    <a href="/ventas/caja/abrir" class="btn-primary">Abrir caja</a>
+                </div>
+            </div>
+
+            <div class="kpi-grid" style="margin-bottom:2rem">
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-cyan">S/</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">S/ {{ "%.2f"|format(total_hoy) }}</span>
+                        <span class="kpi-label">Ventas hoy</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-green">#</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">{{ count_hoy }}</span>
+                        <span class="kpi-label">Pedidos hoy</span>
+                    </div>
+                </div>
+            </div>
+
+            {% if pvs %}
+            <div class="form-section" style="margin-bottom:1.5rem">
+                <h3 class="section-title">Puntos de Venta</h3>
+                <div class="config-grid">
+                    {% for pv in pvs %}
+                    <a href="/ventas/pos/{{ pv.id }}" class="config-card">
+                        <div class="config-icon">POS</div>
+                        <div class="config-info">
+                            <strong>{{ pv.nombre }}</strong>
+                            <span>{{ pv.modo }} - {{ pv.serie_boleta or '---' }}</span>
+                        </div>
+                        <span class="badge badge-ok">Abrir</span>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="form-section">
+                <h3 class="section-title">Ultimas ventas</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Codigo</th><th>Cliente</th><th>Total</th><th>Estado</th><th>Hora</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for p in ultimas %}
+                        <tr>
+                            <td><code>{{ p.codigo }}</code></td>
+                            <td>{{ p.nombre_cliente or 'Clientes varios' }}</td>
+                            <td><strong>S/ {{ "%.2f"|format(p.total) }}</strong></td>
+                            <td>
+                                <span class="badge {% if p.estado == 'facturado' %}badge-ok{% elif p.estado == 'confirmado' %}badge-warn{% else %}badge-off{% endif %}">
+                                    {{ p.estado }}
+                                </span>
+                            </td>
+                            <td>{{ p.created_at.strftime('%H:%M') }}</td>
+                            <td><a href="/ventas/pedidos/{{ p.id }}" class="btn-icon">&rarr;</a></td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="6" class="table-empty">Sin ventas hoy</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

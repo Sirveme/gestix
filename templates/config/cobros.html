@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Medios de Cobro — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            {% if toast %}<div class="toast toast-{{ toast_tipo }}" id="toast">{{ toast }}</div>{% endif %}
+            <div class="page-header">
+                <a href="/config" class="page-back">← Configuración</a>
+                <h1>Medios de Cobro</h1>
+            </div>
+
+            <!-- Cuentas bancarias -->
+            <div class="form-section">
+                <h3 class="section-title">Cuentas Bancarias</h3>
+                <div class="table-wrap" style="margin-bottom:1rem">
+                    <table class="data-table">
+                        <thead><tr><th>Banco</th><th>N° Cuenta</th><th>CCI</th><th>Moneda</th><th>Estado</th></tr></thead>
+                        <tbody>
+                            {% for c in cuentas %}
+                            <tr>
+                                <td>{{ c.banco }}</td>
+                                <td><strong>{{ c.numero_cuenta }}</strong></td>
+                                <td>{{ c.cci or '—' }}</td>
+                                <td>{{ c.moneda }}</td>
+                                <td><span class="badge {% if c.activo %}badge-ok{% else %}badge-off{% endif %}">
+                                    {% if c.activo %}Activa{% else %}Inactiva{% endif %}
+                                </span></td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="5" class="table-empty">No hay cuentas registradas</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <form hx-post="/config/cobros/cuenta" hx-target="body" hx-swap="none"
+                      method="post" action="/config/cobros/cuenta">
+                    <div class="form-grid">
+                        <div class="field"><label>Banco</label><input type="text" name="banco" placeholder="BCP, BBVA, Interbank..." required></div>
+                        <div class="field"><label>N° Cuenta</label><input type="text" name="numero_cuenta" required></div>
+                        <div class="field"><label>CCI</label><input type="text" name="cci"></div>
+                        <div class="field"><label>Titular</label><input type="text" name="titular"></div>
+                        <div class="field">
+                            <label>Moneda</label>
+                            <select name="moneda" class="field-select">
+                                <option value="PEN">PEN - Soles</option>
+                                <option value="USD">USD - Dólares</option>
+                            </select>
+                        </div>
+                        <div class="field field-wide">
+                            <label>Correo notificaciones bancarias</label>
+                            <input type="email" name="correo_notificaciones"
+                                   placeholder="notificaciones@mibanco.com">
+                            <span class="field-hint">Correo donde el banco envía alertas de movimientos — usado por Gestix para validar pagos</span>
+                        </div>
+                        <div class="field">
+                            <label class="toggle-label">
+                                <input type="checkbox" name="notificaciones_activo">
+                                <span>Activar lectura automática de notificaciones</span>
+                            </label>
+                        </div>
+                        <div class="field" style="align-self:end">
+                            <button type="submit" class="btn-primary">+ Agregar cuenta</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Billeteras digitales -->
+            <div class="form-section">
+                <h3 class="section-title">Billeteras Digitales</h3>
+                <div class="table-wrap" style="margin-bottom:1rem">
+                    <table class="data-table">
+                        <thead><tr><th>Tipo</th><th>Número</th><th>Titular</th><th>Estado</th></tr></thead>
+                        <tbody>
+                            {% for b in billeteras %}
+                            <tr>
+                                <td><strong>{{ b.tipo | upper }}</strong></td>
+                                <td>{{ b.numero }}</td>
+                                <td>{{ b.titular or '—' }}</td>
+                                <td><span class="badge {% if b.activo %}badge-ok{% else %}badge-off{% endif %}">
+                                    {% if b.activo %}Activa{% else %}Inactiva{% endif %}
+                                </span></td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="4" class="table-empty">No hay billeteras registradas</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                <form hx-post="/config/cobros/billetera" hx-target="body" hx-swap="none"
+                      method="post" action="/config/cobros/billetera">
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Tipo</label>
+                            <select name="tipo" class="field-select">
+                                <option value="yape">Yape</option>
+                                <option value="plin">Plin</option>
+                                <option value="tunki">Tunki</option>
+                                <option value="otro">Otro</option>
+                            </select>
+                        </div>
+                        <div class="field"><label>Número</label><input type="text" name="numero" placeholder="9xxxxxxxx" required></div>
+                        <div class="field"><label>Titular</label><input type="text" name="titular"></div>
+                        <div class="field" style="align-self:end">
+                            <button type="submit" class="btn-primary">+ Agregar billetera</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+</div>
+<script>const toast=document.getElementById('toast');if(toast)setTimeout(()=>toast.style.opacity='0',3000);</script>
+{% endblock %}

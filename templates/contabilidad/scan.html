@@ -1,0 +1,101 @@
+{% extends "base.html" %}
+{% block title %}SCAN Diagnostico — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/contabilidad/" class="page-back">&larr; Contabilidad</a>
+                <h1>SCAN Diagnostico</h1>
+                <span class="page-sub">
+                    Detecta inconsistencias, pendientes y riesgos tributarios
+                </span>
+            </div>
+
+            <div class="form-section" style="margin-bottom:1.5rem">
+                <h3 class="section-title">Ejecutar diagnostico</h3>
+                <div style="display:flex;gap:1rem;align-items:flex-end;flex-wrap:wrap">
+                    <div class="field">
+                        <label>Periodo</label>
+                        <input type="month" id="scan-periodo"
+                               value="{{ periodo }}" class="field-select" style="width:auto">
+                    </div>
+                    <button class="btn-primary" onclick="ejecutarScan()" id="btn-scan">
+                        Ejecutar SCAN ahora
+                    </button>
+                </div>
+                <div id="scan-loading" style="display:none;margin-top:1rem;color:var(--cyan)">
+                    Analizando... esto toma unos segundos
+                </div>
+            </div>
+
+            {% if historial %}
+            <div class="form-section">
+                <h3 class="section-title">Diagnosticos anteriores</h3>
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Periodo</th><th>Estado</th><th>Rojas</th>
+                            <th>Amarillas</th><th>Fecha</th><th></th></tr>
+                    </thead>
+                    <tbody>
+                        {% for d in historial %}
+                        <tr>
+                            <td><strong>{{ d.periodo }}</strong></td>
+                            <td>
+                                <span class="semaforo-badge semaforo-{{ d.estado_global }}">
+                                    {% if d.estado_global == 'verde' %}Verde
+                                    {% elif d.estado_global == 'amarillo' %}Amarillo
+                                    {% else %}Rojo{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                {% if d.total_alertas_rojas > 0 %}
+                                <span class="badge" style="background:rgba(255,68,68,0.15);color:var(--red)">
+                                    {{ d.total_alertas_rojas }}
+                                </span>
+                                {% else %}&mdash;{% endif %}
+                            </td>
+                            <td>
+                                {% if d.total_alertas_amarillas > 0 %}
+                                <span class="badge badge-warn">{{ d.total_alertas_amarillas }}</span>
+                                {% else %}&mdash;{% endif %}
+                            </td>
+                            <td>{{ d.fecha_scan.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td><a href="/contabilidad/scan/{{ d.id }}" class="btn-icon">&rarr;</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+        </main>
+    </div>
+</div>
+
+<script>
+async function ejecutarScan() {
+    const periodo = document.getElementById('scan-periodo').value;
+    if (!periodo) return alert('Selecciona un periodo');
+
+    document.getElementById('btn-scan').disabled = true;
+    document.getElementById('scan-loading').style.display = 'block';
+
+    const resp = await fetch('/contabilidad/scan', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({periodo}),
+    });
+    const r = await resp.json();
+
+    if (r.ok) {
+        window.location.href = `/contabilidad/scan/${r.diagnostico_id}`;
+    } else {
+        document.getElementById('btn-scan').disabled = false;
+        document.getElementById('scan-loading').style.display = 'none';
+        alert('Error al ejecutar el diagnostico');
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+{% block title %}Integraciones — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/config" class="page-back">← Configuración</a>
+                <h1>Integraciones Externas</h1>
+            </div>
+
+            <div class="config-grid">
+                {% for s in servicios %}
+                {% set integ = integ_map.get(s.codigo) %}
+                <div class="integ-card {% if integ and integ.activo %}integ-activa{% endif %}">
+                    <div class="integ-header">
+                        <div>
+                            <strong class="integ-nombre">{{ s.nombre }}</strong>
+                            <span class="integ-desc">{{ s.desc }}</span>
+                        </div>
+                        <span class="badge {% if integ and integ.activo %}badge-ok{% else %}badge-off{% endif %}">
+                            {% if integ and integ.activo %}Activa{% else %}Inactiva{% endif %}
+                        </span>
+                    </div>
+                    <form hx-post="/config/integraciones/{{ s.codigo }}"
+                          hx-target="#toast-{{ s.codigo }}"
+                          hx-swap="outerHTML"
+                          method="post" action="/config/integraciones/{{ s.codigo }}"
+                          class="integ-form">
+                        <div id="toast-{{ s.codigo }}"></div>
+                        <div class="field">
+                            <label>API Key / Token</label>
+                            <input type="password" name="api_key"
+                                   value="{{ integ.api_key if integ else '' }}"
+                                   placeholder="sk-...">
+                        </div>
+                        {% if s.codigo not in ['sunat_ruc','reniec'] %}
+                        <div class="field">
+                            <label>URL (opcional)</label>
+                            <input type="text" name="api_url"
+                                   value="{{ integ.api_url if integ else '' }}"
+                                   placeholder="https://...">
+                        </div>
+                        {% endif %}
+                        <div class="integ-footer">
+                            <label class="toggle-label">
+                                <input type="checkbox" name="activo"
+                                       {% if integ and integ.activo %}checked{% endif %}>
+                                <span>Activar</span>
+                            </label>
+                            <button type="submit" class="btn-secondary" style="padding:0.4rem 1rem;font-size:0.8rem">
+                                Guardar
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                {% endfor %}
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+{% block title %}Stock Actual &mdash; Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+
+            <div class="page-header">
+                <a href="/inventario/" class="page-back">&larr; Inventario</a>
+                <div>
+                    <h1 class="page-title">Stock Actual</h1>
+                    <p class="page-sub">Niveles de inventario por producto y almacen</p>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="section-title">Filtros</div>
+                <form method="get" style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+                    <div class="field">
+                        <label for="almacen">Almacen</label>
+                        <select name="almacen" id="almacen" class="field-select">
+                            <option value="">Todos los almacenes</option>
+                            {% for alm in almacenes %}
+                            <option value="{{ alm.id }}" {% if id_almacen_sel == alm.id %}selected{% endif %}>
+                                {{ alm.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="search">Buscar producto</label>
+                        <input type="text" name="search" id="search" placeholder="Codigo o nombre..."
+                               value="{{ q }}" class="field-input">
+                    </div>
+                    <div class="field">
+                        <button type="submit" class="btn-primary">Filtrar</button>
+                        <a href="/inventario/stock/" class="btn-secondary" style="margin-left:.5rem;">Limpiar</a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-wrap">
+                {% if stock_items %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Codigo</th>
+                            <th>Nombre</th>
+                            <th>Almacen</th>
+                            <th style="text-align:right;">Cantidad</th>
+                            <th style="text-align:right;">Costo Prom. (S/)</th>
+                            <th style="text-align:right;">Costo Total (S/)</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for item in stock_items %}
+                        <tr>
+                            <td><code>{{ item.codigo }}</code></td>
+                            <td>{{ item.nombre }}</td>
+                            <td>{{ item.almacen }}</td>
+                            <td style="text-align:right;">
+                                {% if item.cantidad < 0 %}
+                                    <span style="color:#dc2626; font-weight:600;">{{ item.cantidad }}</span>
+                                {% elif item.cantidad <= item.stock_minimo %}
+                                    <span style="color:#d97706; font-weight:600;">{{ item.cantidad }}</span>
+                                {% else %}
+                                    {{ item.cantidad }}
+                                {% endif %}
+                            </td>
+                            <td style="text-align:right;">S/ {{ item.costo_promedio|round(2) }}</td>
+                            <td style="text-align:right;">S/ {{ item.costo_total|round(2) }}</td>
+                            <td>
+                                {% if item.cantidad < 0 %}
+                                <button class="btn-icon"
+                                        onclick="pedirSustento('{{ item.id }}', '{{ item.nombre|replace("'", "\\'") }}')"
+                                        title="Pedir sustento">
+                                    Sustento
+                                </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="table-empty">
+                    No se encontraron productos con los filtros aplicados.
+                </div>
+                {% endif %}
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script>
+function pedirSustento(productoId, productoNombre) {
+    if (!confirm('Enviar pedido de sustento para "' + productoNombre + '"?')) return;
+    fetch('/inventario/stock/' + productoId + '/sustento/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            alert('Pedido de sustento enviado correctamente.');
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo enviar el pedido.'));
+        }
+    })
+    .catch(function() {
+        alert('Error de conexion. Intente nuevamente.');
+    });
+}
+</script>
+{% endblock %}

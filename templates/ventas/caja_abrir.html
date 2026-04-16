@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Abrir Caja — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/ventas/" class="page-back">&larr; Ventas</a>
+                <h1>Apertura de Caja</h1>
+            </div>
+
+            {% if error %}
+            <div class="auth-error" style="margin-bottom:1rem">{{ error }}</div>
+            {% endif %}
+
+            <div style="max-width:480px">
+                <form method="post" action="/ventas/caja/abrir">
+                    <div class="form-section">
+                        <h3 class="section-title">Datos de apertura</h3>
+                        <div class="form-grid">
+                            <div class="field field-wide">
+                                <label>Punto de venta</label>
+                                <select name="id_punto_venta" class="field-select" required>
+                                    <option value="">— Seleccionar —</option>
+                                    {% for pv in pvs %}
+                                    <option value="{{ pv.id }}">{{ pv.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="field field-wide">
+                                <label>Monto inicial en caja (S/)</label>
+                                <input type="number" name="monto_inicial"
+                                       step="0.01" value="0.00" min="0">
+                            </div>
+                            <div class="field field-wide">
+                                <label>Nota (opcional)</label>
+                                <input type="text" name="nota"
+                                       placeholder="Observaciones de apertura">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn-primary">Abrir caja</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

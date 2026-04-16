@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+{% block title %}Tomas de Inventario &mdash; Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+
+            <div class="page-header">
+                <a href="/inventario/" class="page-back">&larr; Inventario</a>
+                <div>
+                    <h1 class="page-title">Tomas de Inventario</h1>
+                    <p class="page-sub">Conteo fisico y conciliacion de existencias</p>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <div class="section-title">Nueva Toma de Inventario</div>
+                <form id="form-nueva-toma" style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+
+                    <div class="field">
+                        <label for="almacen">Almacen</label>
+                        <select name="almacen" id="almacen" class="field-select" required>
+                            <option value="">Seleccionar almacen...</option>
+                            {% for alm in almacenes %}
+                            <option value="{{ alm.id }}">{{ alm.nombre }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="tipo">Tipo de Toma</label>
+                        <select name="tipo" id="tipo" class="field-select" required>
+                            <option value="">Seleccionar tipo...</option>
+                            <option value="TOTAL">Total</option>
+                            <option value="PARCIAL">Parcial</option>
+                            <option value="CICLICA">Ciclica</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <button type="button" class="btn-primary" onclick="nuevaToma()">
+                            Iniciar Toma
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-wrap">
+                <div class="section-title" style="padding:1rem 1rem 0;">Historial de Tomas</div>
+                {% if tomas %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Codigo</th>
+                            <th>Almacen</th>
+                            <th>Tipo</th>
+                            <th style="text-align:center;">Items</th>
+                            <th style="text-align:center;">Diferencias</th>
+                            <th>Estado</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for toma in tomas %}
+                        <tr>
+                            <td><code>{{ toma.codigo }}</code></td>
+                            <td>{{ toma.almacen }}</td>
+                            <td>{{ toma.tipo }}</td>
+                            <td style="text-align:center;">{{ toma.total_items }}</td>
+                            <td style="text-align:center;">
+                                {% if toma.diferencias > 0 %}
+                                    <span class="badge badge-warn">{{ toma.diferencias }}</span>
+                                {% else %}
+                                    <span class="badge badge-ok">0</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if toma.estado == 'BORRADOR' %}
+                                    <span class="badge badge-off">Borrador</span>
+                                {% elif toma.estado == 'EN_PROGRESO' %}
+                                    <span class="badge badge-warn">En Progreso</span>
+                                {% elif toma.estado == 'FINALIZADA' %}
+                                    <span class="badge badge-ok">Finalizada</span>
+                                {% else %}
+                                    <span class="badge">{{ toma.estado }}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ toma.fecha.strftime('%d/%m/%Y %H:%M') }}</td>
+                            <td>
+                                <a href="/inventario/tomas/{{ toma.id }}/" class="btn-icon">
+                                    Ver &rarr;
+                                </a>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="table-empty">
+                    No hay tomas de inventario registradas.
+                </div>
+                {% endif %}
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script>
+function nuevaToma() {
+    var form = document.getElementById('form-nueva-toma');
+    var almacen = form.querySelector('[name="almacen"]').value;
+    var tipo = form.querySelector('[name="tipo"]').value;
+    var csrf = form.querySelector('[name="csrfmiddlewaretoken"]').value;
+
+    if (!almacen) { alert('Seleccione un almacen.'); return; }
+    if (!tipo) { alert('Seleccione el tipo de toma.'); return; }
+
+    fetch('/inventario/tomas/nueva/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': csrf,
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ almacen: almacen, tipo: tipo })
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok && data.toma_id) {
+            window.location.href = '/inventario/tomas/' + data.toma_id + '/';
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo crear la toma.'));
+        }
+    })
+    .catch(function() {
+        alert('Error de conexion. Intente nuevamente.');
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,131 @@
+{% extends "base.html" %}
+{% block title %}Tipos de Cliente — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            {% if toast %}<div class="toast toast-{{ toast_tipo }}" id="toast">{{ toast }}</div>{% endif %}
+
+            <div class="page-header">
+                <a href="/config" class="page-back">&larr; Configuracion</a>
+                <h1>Tipos de Cliente</h1>
+                <span class="page-sub">
+                    Define los tipos de clientes de tu negocio y su politica de precios y credito
+                </span>
+            </div>
+
+            <!-- Tipos existentes -->
+            <div class="table-wrap" style="margin-bottom:1.5rem">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Tipo</th><th>Lista de precio</th>
+                            <th>Desc. max.</th><th>Credito</th><th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for t in tipos %}
+                        <tr>
+                            <td>
+                                <strong>{{ t.nombre }}</strong>
+                                {% if t.descripcion %}<br><small>{{ t.descripcion }}</small>{% endif %}
+                            </td>
+                            <td>{{ t.lista_precio.nombre if t.lista_precio else '— Precio regular —' }}</td>
+                            <td>{{ t.descuento_max }}%</td>
+                            <td>
+                                {% if t.permite_credito %}
+                                <span class="badge badge-ok">{{ t.dias_credito_default }}d</span>
+                                {% else %}
+                                <span class="badge badge-off">No</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {% if t.activo %}badge-ok{% else %}badge-off{% endif %}">
+                                    {% if t.activo %}Activo{% else %}Inactivo{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="5" class="table-empty">
+                            No hay tipos de cliente. Ejemplos: Bodega, Minimarket, Distribuidor, Mayorista.
+                        </td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Formulario -->
+            <form hx-post="/config/tipos-cliente" hx-target="body" hx-swap="none"
+                  method="post" action="/config/tipos-cliente">
+                <div class="form-section">
+                    <h3 class="section-title">Nuevo Tipo de Cliente</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>Nombre *</label>
+                            <input type="text" name="nombre" required
+                                   placeholder="Bodega, Minimarket, Distribuidor...">
+                        </div>
+                        <div class="field field-wide">
+                            <label>Descripcion</label>
+                            <input type="text" name="descripcion"
+                                   placeholder="Negocios de reventa al por menor">
+                        </div>
+                        <div class="field">
+                            <label>Lista de precio asignada</label>
+                            <select name="id_lista_precio" class="field-select">
+                                <option value="">— Precio regular —</option>
+                                {% for l in listas %}
+                                <option value="{{ l.id }}">{{ l.nombre }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Descuento maximo (%)</label>
+                            <input type="number" name="descuento_max"
+                                   step="0.01" value="0" min="0" max="100">
+                        </div>
+                        <div class="field">
+                            <label>Dias de credito por defecto</label>
+                            <input type="number" name="dias_credito_default" value="0" min="0">
+                        </div>
+                        <div class="field">
+                            <label>Limite de credito por defecto (S/)</label>
+                            <input type="number" name="limite_credito_default"
+                                   step="0.01" value="0">
+                        </div>
+                        <div class="field">
+                            <label>Orden de visualizacion</label>
+                            <input type="number" name="orden" value="{{ tipos|length }}">
+                        </div>
+                        <div class="field">
+                            <div class="toggle-grid">
+                                <label class="toggle-label">
+                                    <input type="checkbox" name="activo" checked>
+                                    <span>Activo</span>
+                                </label>
+                                <label class="toggle-label">
+                                    <input type="checkbox" name="permite_credito">
+                                    <span>Permite ventas al credito</span>
+                                </label>
+                                <label class="toggle-label">
+                                    <input type="checkbox" name="requiere_aprobacion">
+                                    <span>Requiere aprobacion de credito</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar tipo de cliente</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+<script>
+const toast = document.getElementById('toast');
+if (toast) setTimeout(() => toast.style.opacity = '0', 3000);
+</script>
+{% endblock %}

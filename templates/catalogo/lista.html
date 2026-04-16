@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+{% block title %}Catálogo de Productos — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+
+            <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <h1>Catálogo de Productos</h1>
+                    <span class="page-sub">{{ total }} productos encontrados</span>
+                </div>
+                <a href="/catalogo/nuevo" class="btn-primary">+ Nuevo producto</a>
+            </div>
+
+            <!-- Barra de búsqueda + vista -->
+            <div class="cat-toolbar">
+                <div class="cat-search">
+                    <form method="get" action="/catalogo" style="display:flex;gap:0.5rem;flex:1">
+                        <div class="search-box">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                            </svg>
+                            <input type="text" name="q" value="{{ q }}"
+                                   placeholder="Buscar por nombre o código..."
+                                   autocomplete="off">
+                            <input type="hidden" name="vista" value="{{ vista }}">
+                        </div>
+                        <button type="submit" class="btn-primary" style="padding:0.6rem 1rem">Buscar</button>
+                    </form>
+
+                    <!-- Scanner código de barra -->
+                    <div class="scanner-wrap">
+                        <input type="text" id="scanner-input" placeholder="📷 Escanear código..."
+                               hx-get="/catalogo/buscar-barra"
+                               hx-trigger="keyup[keyCode==13]"
+                               hx-target="#scanner-result"
+                               hx-include="[name='codigo']"
+                               name="codigo"
+                               class="scanner-input">
+                        <div id="scanner-result"></div>
+                    </div>
+                </div>
+
+                <!-- Switch vista -->
+                <div class="vista-switch">
+                    <a href="?q={{ q }}&vista=tabla" class="vista-btn {% if vista == 'tabla' %}active{% endif %}" title="Vista tabla">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                        </svg>
+                    </a>
+                    <a href="?q={{ q }}&vista=cards" class="vista-btn {% if vista == 'cards' %}active{% endif %}" title="Vista cards">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                            <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/>
+                        </svg>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Vista TABLA -->
+            {% if vista == 'tabla' %}
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Producto</th>
+                            <th>Categoría</th>
+                            <th>Unidad</th>
+                            <th style="text-align:right">Precio</th>
+                            <th style="text-align:right">Stock</th>
+                            <th>Estado</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for p in productos %}
+                        <tr>
+                            <td><code class="codigo-chip">{{ p.codigo or '—' }}</code></td>
+                            <td>
+                                <strong>{{ p.nombre }}</strong>
+                                {% if p.destacado %}<span class="badge badge-warn">⭐</span>{% endif %}
+                            </td>
+                            <td>{{ p.clasificador1.nombre if p.clasificador1 else '—' }}</td>
+                            <td>{{ p.unidad.abreviado if p.unidad else '—' }}</td>
+                            <td style="text-align:right;font-family:'Syne',sans-serif;color:var(--cyan)">
+                                S/ {{ "%.2f"|format(p.precio_venta or 0) }}
+                            </td>
+                            <td style="text-align:right">
+                                {% if p.id in stocks %}
+                                    {% set s = stocks[p.id] %}
+                                    <span class="{% if s.stock_disponible <= p.stock_minimo %}text-warn{% else %}text-ok{% endif %}">
+                                        {{ "%.2f"|format(s.stock_disponible or 0) }}
+                                    </span>
+                                {% else %}—{% endif %}
+                            </td>
+                            <td>
+                                <span class="badge {% if p.activo %}badge-ok{% else %}badge-off{% endif %}">
+                                    {% if p.activo %}Activo{% else %}Inactivo{% endif %}
+                                </span>
+                            </td>
+                            <td>
+                                <a href="/catalogo/{{ p.id }}" class="btn-icon" title="Editar">✏️</a>
+                                <a href="/catalogo/{{ p.id }}/kardex" class="btn-icon" title="Kardex">📋</a>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="8" class="table-empty">
+                            {% if q %}No hay productos para "{{ q }}"{% else %}No hay productos registrados{% endif %}
+                        </td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Vista CARDS -->
+            {% else %}
+            <div class="productos-grid">
+                {% for p in productos %}
+                <a href="/catalogo/{{ p.id }}" class="producto-card">
+                    <div class="prod-img">
+                        {% if p.imagen_url %}
+                        <img src="{{ p.imagen_url }}" alt="{{ p.nombre }}" loading="lazy">
+                        {% else %}
+                        <div class="prod-img-placeholder">📦</div>
+                        {% endif %}
+                    </div>
+                    <div class="prod-info">
+                        <span class="prod-codigo">{{ p.codigo or '' }}</span>
+                        <strong class="prod-nombre">{{ p.nombre }}</strong>
+                        <span class="prod-cat">{{ p.clasificador1.nombre if p.clasificador1 else '' }}</span>
+                    </div>
+                    <div class="prod-footer">
+                        <span class="prod-precio">S/ {{ "%.2f"|format(p.precio_venta or 0) }}</span>
+                        {% if p.id in stocks %}
+                        <span class="prod-stock {% if stocks[p.id].stock_disponible <= p.stock_minimo %}text-warn{% endif %}">
+                            {{ "%.0f"|format(stocks[p.id].stock_disponible or 0) }} {{ p.unidad.abreviado if p.unidad else '' }}
+                        </span>
+                        {% endif %}
+                    </div>
+                </a>
+                {% else %}
+                <div class="coming-soon-card">
+                    <div class="cs-icon">📦</div>
+                    <h3>Sin productos</h3>
+                    <p><a href="/catalogo/nuevo" class="text-cyan">Agrega tu primer producto</a></p>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+        </main>
+    </div>
+</div>
+{% endblock %}

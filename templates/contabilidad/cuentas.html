@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Plan de Cuentas PCGE — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/contabilidad/" class="page-back">&larr; Contabilidad</a>
+                <h1>Plan de Cuentas PCGE</h1>
+                <span class="page-sub">{{ cuentas|length }} cuentas activas (niveles 1-3)</span>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Codigo</th>
+                            <th>Nombre oficial</th>
+                            <th>Alias</th>
+                            <th>Nivel</th>
+                            <th>Tipo</th>
+                            <th>Nat.</th>
+                            <th>Mov.</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for c in cuentas %}
+                        <tr>
+                            <td><code style="{% if c.nivel == 1 %}font-weight:700;font-size:1rem{% endif %}">{{ c.codigo }}</code></td>
+                            <td style="{% if c.nivel == 1 %}font-weight:700{% elif c.nivel == 3 %}padding-left:2rem;color:var(--text3){% endif %}">
+                                {{ c.nombre_oficial }}
+                            </td>
+                            <td>
+                                <input type="text" class="inline-input"
+                                       value="{{ c.alias or '' }}"
+                                       placeholder="sin alias"
+                                       onchange="guardarAlias({{ c.id }}, this.value)"
+                                       style="width:100%;max-width:200px">
+                            </td>
+                            <td>{{ c.nivel }}</td>
+                            <td>{{ c.tipo or '' }}</td>
+                            <td>{{ c.naturaleza or '' }}</td>
+                            <td>{% if c.acepta_movimiento %}<span class="badge badge-ok">Si</span>{% else %}&mdash;{% endif %}</td>
+                        </tr>
+                        {% else %}
+                        <tr><td colspan="7" class="table-empty">Sin cuentas cargadas. Ejecutar migracion v004_pcge.sql</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+
+<script>
+async function guardarAlias(id, alias) {
+    const resp = await fetch(`/contabilidad/cuentas/${id}/alias`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({alias}),
+    });
+    const r = await resp.json();
+    if (!r.ok) alert('Error al guardar alias');
+}
+</script>
+{% endblock %}

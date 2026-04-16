@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% block title %}Nuevo Usuario — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/usuarios/" class="page-back">&larr; Usuarios</a>
+                <h1>Nuevo Usuario</h1>
+            </div>
+
+            <div style="max-width:600px">
+                <form method="post" action="/usuarios/nuevo">
+                    <div class="form-section">
+                        <h3 class="section-title">Datos de acceso</h3>
+                        <div class="form-grid">
+                            <div class="field">
+                                <label>Usuario *</label>
+                                <input type="text" name="usuario" required
+                                       placeholder="Sin espacios ni tildes">
+                            </div>
+                            <div class="field">
+                                <label>Clave inicial</label>
+                                <input type="text" name="clave"
+                                       placeholder="El usuario debe cambiarla al ingresar"
+                                       value="Gestix2024!">
+                            </div>
+                            <div class="field">
+                                <label>Rol</label>
+                                <select name="id_rol" class="field-select">
+                                    <option value="">— Sin rol —</option>
+                                    {% for r in roles %}
+                                    <option value="{{ r.id }}">{{ r.nombre }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="field">
+                                <label>DNI</label>
+                                <input type="text" name="dni" maxlength="8">
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-section">
+                        <h3 class="section-title">Datos personales</h3>
+                        <div class="form-grid">
+                            <div class="field field-wide">
+                                <label>Nombre completo</label>
+                                <input type="text" name="nombre_completo">
+                            </div>
+                            <div class="field">
+                                <label>Correo</label>
+                                <input type="email" name="correo">
+                            </div>
+                            <div class="field">
+                                <label>Celular</label>
+                                <input type="text" name="celular">
+                            </div>
+                        </div>
+                        <div class="toggle-grid" style="margin-top:0.75rem">
+                            <label class="toggle-label">
+                                <input type="checkbox" name="activo" checked>
+                                <span>Usuario activo</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <a href="/usuarios/" class="btn-secondary">Cancelar</a>
+                        <button type="submit" class="btn-primary">Crear usuario</button>
+                    </div>
+                </form>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POS — {{ pv.nombre if pv else 'Ventas' }} — Gestix</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+</head>
+<body>
+
+<div class="pos-wrap">
+
+    <!-- Panel izquierdo: busqueda y productos -->
+    <div class="pos-catalogo">
+
+        <div class="pos-header">
+            <div class="pos-header-left">
+                <a href="/ventas/" class="page-back" style="margin:0">&larr; Ventas</a>
+                <span class="pos-pv-nombre">{{ pv.nombre if pv else 'POS' }}</span>
+            </div>
+            {% if caja %}
+            <span class="badge badge-ok">Caja abierta</span>
+            {% else %}
+            <a href="/ventas/caja/abrir" class="badge badge-warn">Abrir caja</a>
+            {% endif %}
+        </div>
+
+        <div class="pos-search">
+            <div class="search-input-wrap">
+                <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+                </svg>
+                <input type="text" id="pos-search"
+                       placeholder="Buscar producto, codigo o escanear..."
+                       autocomplete="off"
+                       hx-get="/ventas/pos/productos/buscar"
+                       hx-trigger="keyup changed delay:250ms"
+                       hx-target="#pos-productos"
+                       hx-swap="innerHTML">
+            </div>
+            <button class="pos-voz-btn" id="btn-voz" title="Buscar por voz"
+                    onclick="iniciarVoz()">MIC</button>
+        </div>
+
+        <div class="pos-categorias">
+            <button class="cat-chip active" onclick="filtrarCategoria(null, this)">
+                Todos
+            </button>
+            {% for cat in categorias %}
+            <button class="cat-chip" onclick="filtrarCategoria({{ cat.id }}, this)">
+                {{ cat.nombre }}
+            </button>
+            {% endfor %}
+        </div>
+
+        <div class="pos-productos-container">
+            <div id="pos-productos" class="pos-productos-grid">
+                <div class="pos-empty">
+                    <span>Busca un producto o selecciona una categoria</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Panel derecho: carrito y cobro -->
+    <div class="pos-carrito-panel">
+
+        <div class="pos-cliente-section">
+            <div class="pos-section-title">Cliente</div>
+            <div style="display:flex;gap:0.5rem">
+                <input type="text" id="cliente-doc"
+                       placeholder="RUC / DNI"
+                       class="pos-input" maxlength="11"
+                       onkeypress="if(event.key==='Enter') buscarCliente()">
+                <button class="pos-btn-sec" onclick="buscarCliente()">Buscar</button>
+            </div>
+            <div id="cliente-nombre" class="pos-cliente-nombre">Clientes varios</div>
+        </div>
+
+        <div class="pos-carrito">
+            <div class="pos-section-title">
+                Pedido
+                <span id="items-count" class="badge badge-ok" style="font-size:0.7rem">0</span>
+            </div>
+            <div id="carrito-items" class="carrito-lista">
+                <div class="carrito-empty">Agrega productos al pedido</div>
+            </div>
+        </div>
+
+        <div class="pos-totales">
+            <div class="total-row">
+                <span>Subtotal</span>
+                <span id="tot-subtotal">S/ 0.00</span>
+            </div>
+            <div class="total-row">
+                <span>IGV ({{ igv_tasa }}%)</span>
+                <span id="tot-igv">S/ 0.00</span>
+            </div>
+            <div class="total-row total-final">
+                <span>TOTAL</span>
+                <span id="tot-total">S/ 0.00</span>
+            </div>
+        </div>
+
+        <div class="pos-comprobante-sel">
+            <label class="radio-label">
+                <input type="radio" name="tipo_cpe" value="00" checked
+                       onchange="setTipoCpe(this.value)">
+                <span>Ticket</span>
+            </label>
+            <label class="radio-label">
+                <input type="radio" name="tipo_cpe" value="03"
+                       onchange="setTipoCpe(this.value)">
+                <span>Boleta</span>
+            </label>
+            <label class="radio-label">
+                <input type="radio" name="tipo_cpe" value="01"
+                       onchange="setTipoCpe(this.value)">
+                <span>Factura</span>
+            </label>
+        </div>
+
+        <div class="pos-medio-pago">
+            <div class="pos-section-title">Medio de pago</div>
+            <div class="medios-grid">
+                {% for m in medios_cobro %}
+                <button class="medio-btn {% if loop.first %}active{% endif %}"
+                        onclick="setMedioPago('{{ m.tipo }}', this)">
+                    {{ m.nombre }}
+                </button>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div class="pos-pago-input">
+            <label>Monto recibido (S/)</label>
+            <input type="number" id="monto-pagado" class="pos-input-grande"
+                   step="0.01" placeholder="0.00"
+                   oninput="calcularVuelto()">
+            <div class="vuelto-display">
+                Vuelto: <strong id="vuelto-monto">S/ 0.00</strong>
+            </div>
+        </div>
+
+        <div class="pos-acciones">
+            <button class="pos-btn-danger" onclick="limpiarCarrito()">
+                Limpiar
+            </button>
+            <button class="pos-btn-primary" onclick="cobrar()"
+                    id="btn-cobrar" disabled>
+                Cobrar S/ 0.00
+            </button>
+        </div>
+
+    </div>
+</div>
+
+<div id="modal-pago" class="modal-overlay" style="display:none">
+    <div class="modal-box">
+        <h3 class="modal-title">Venta confirmada</h3>
+        <div id="modal-pago-detalle"></div>
+        <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
+            <button class="btn-secondary" onclick="imprimirTicket()">Imprimir</button>
+            <button class="btn-primary" onclick="nuevaVenta()">+ Nueva venta</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const POS = {
+    id_pv: {{ id_pv }},
+    igv_tasa: {{ igv_tasa }},
+    pedido_id: null,
+    items: [],
+    tipo_cpe: '00',
+    medio_pago: '{{ medios_cobro[0].tipo if medios_cobro else "efectivo" }}',
+    cliente: { doc: '', nombre: 'Clientes varios', direccion: '' },
+    totales: { subtotal: 0, igv: 0, total: 0 },
+};
+
+async function iniciarPedido() {
+    const resp = await fetch('/ventas/pedido/nuevo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id_punto_venta: POS.id_pv }),
+    });
+    const data = await resp.json();
+    POS.pedido_id = data.id;
+}
+
+async function agregarProducto(data) {
+    if (!POS.pedido_id) await iniciarPedido();
+
+    const resp = await fetch(`/ventas/pedido/${POS.pedido_id}/item`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+    });
+    const result = await resp.json();
+
+    POS.items.push({ ...data, item_id: result.item_id });
+    POS.totales = result.totales;
+    renderCarrito();
+    actualizarTotales();
+    document.getElementById('btn-cobrar').disabled = POS.items.length === 0;
+}
+
+function renderCarrito() {
+    const el = document.getElementById('carrito-items');
+    document.getElementById('items-count').textContent = POS.items.length;
+
+    if (POS.items.length === 0) {
+        el.innerHTML = '<div class="carrito-empty">Agrega productos al pedido</div>';
+        return;
+    }
+
+    el.innerHTML = POS.items.map((item, idx) => `
+        <div class="carrito-item">
+            <div class="carrito-item-info">
+                <strong>${item.nombre_producto}</strong>
+                <span>${item.cantidad} ${item.unidad} x S/ ${parseFloat(item.precio_unitario).toFixed(2)}</span>
+            </div>
+            <div class="carrito-item-total">
+                S/ ${parseFloat(item.total || 0).toFixed(2)}
+                <button class="carrito-remove" onclick="eliminarItem(${item.item_id}, ${idx})">X</button>
+            </div>
+        </div>
+    `).join('');
+}
+
+async function eliminarItem(item_id, idx) {
+    await fetch(`/ventas/pedido/${POS.pedido_id}/item/${item_id}`, {
+        method: 'DELETE' });
+    POS.items.splice(idx, 1);
+    renderCarrito();
+    if (POS.items.length === 0) {
+        POS.totales = { subtotal: 0, igv: 0, total: 0 };
+        document.getElementById('btn-cobrar').disabled = true;
+    }
+    actualizarTotales();
+}
+
+function actualizarTotales() {
+    document.getElementById('tot-subtotal').textContent =
+        'S/ ' + parseFloat(POS.totales.subtotal || 0).toFixed(2);
+    document.getElementById('tot-igv').textContent =
+        'S/ ' + parseFloat(POS.totales.igv || 0).toFixed(2);
+    document.getElementById('tot-total').textContent =
+        'S/ ' + parseFloat(POS.totales.total || 0).toFixed(2);
+    document.getElementById('btn-cobrar').textContent =
+        'Cobrar S/ ' + parseFloat(POS.totales.total || 0).toFixed(2);
+    calcularVuelto();
+}
+
+function calcularVuelto() {
+    const pagado = parseFloat(document.getElementById('monto-pagado').value || 0);
+    const total = parseFloat(POS.totales.total || 0);
+    const vuelto = Math.max(0, pagado - total);
+    document.getElementById('vuelto-monto').textContent =
+        'S/ ' + vuelto.toFixed(2);
+}
+
+async function cobrar() {
+    if (!POS.pedido_id || POS.items.length === 0) return;
+
+    const montoPagado = parseFloat(
+        document.getElementById('monto-pagado').value || POS.totales.total);
+
+    const payload = {
+        ruc_dni: POS.cliente.doc,
+        nombre_cliente: POS.cliente.nombre,
+        direccion_cliente: POS.cliente.direccion,
+        tipo_comprobante: POS.tipo_cpe,
+        medio_pago: POS.medio_pago,
+        monto_pagado: montoPagado,
+        emitir_cpe: POS.tipo_cpe !== '00',
+    };
+
+    const resp = await fetch(`/ventas/pedido/${POS.pedido_id}/confirmar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+    });
+    const result = await resp.json();
+
+    if (result.ok) {
+        mostrarModalPago(result, montoPagado);
+    } else {
+        alert('Error al procesar el pago: ' + (result.error || 'Error desconocido'));
+    }
+}
+
+function mostrarModalPago(result, montoPagado) {
+    const vuelto = Math.max(0, montoPagado - result.total);
+    document.getElementById('modal-pago-detalle').innerHTML = `
+        <div class="modal-pago-info">
+            <div class="modal-row"><span>Codigo:</span><strong>${result.codigo}</strong></div>
+            <div class="modal-row"><span>Total:</span><strong>S/ ${result.total.toFixed(2)}</strong></div>
+            <div class="modal-row"><span>Pagado:</span><strong>S/ ${montoPagado.toFixed(2)}</strong></div>
+            <div class="modal-row"><span>Vuelto:</span><strong class="vuelto-grande">S/ ${vuelto.toFixed(2)}</strong></div>
+            ${result.serie ? `<div class="modal-row"><span>Comprobante:</span><strong>${result.serie}-${result.numero}</strong></div>` : ''}
+            <div class="modal-row"><span>Estado:</span><span class="badge badge-ok">${result.estado}</span></div>
+        </div>
+    `;
+    document.getElementById('modal-pago').style.display = 'flex';
+}
+
+function nuevaVenta() {
+    POS.pedido_id = null;
+    POS.items = [];
+    POS.totales = { subtotal: 0, igv: 0, total: 0 };
+    POS.cliente = { doc: '', nombre: 'Clientes varios', direccion: '' };
+    renderCarrito();
+    actualizarTotales();
+    document.getElementById('modal-pago').style.display = 'none';
+    document.getElementById('cliente-doc').value = '';
+    document.getElementById('cliente-nombre').textContent = 'Clientes varios';
+    document.getElementById('monto-pagado').value = '';
+    document.getElementById('pos-search').value = '';
+    document.getElementById('pos-productos').innerHTML =
+        '<div class="pos-empty">Busca un producto o selecciona una categoria</div>';
+    document.getElementById('btn-cobrar').disabled = true;
+}
+
+function limpiarCarrito() {
+    if (POS.items.length === 0) return;
+    if (confirm('Limpiar el pedido?')) nuevaVenta();
+}
+
+function filtrarCategoria(id_clas1, btn) {
+    document.querySelectorAll('.cat-chip').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('pos-search').value = '';
+
+    if (!id_clas1) {
+        document.getElementById('pos-productos').innerHTML =
+            '<div class="pos-empty">Busca un producto o selecciona una categoria</div>';
+        return;
+    }
+
+    fetch(`/ventas/pos/categoria/${id_clas1}`)
+        .then(r => r.text())
+        .then(html => {
+            document.getElementById('pos-productos').innerHTML = html;
+        });
+}
+
+async function buscarCliente() {
+    const doc = document.getElementById('cliente-doc').value.trim();
+    if (!doc) return;
+    POS.cliente.doc = doc;
+    POS.cliente.nombre = doc.length === 11 ? 'EMPRESA (RUC ' + doc + ')' : 'PERSONA (DNI ' + doc + ')';
+    document.getElementById('cliente-nombre').textContent = POS.cliente.nombre;
+}
+
+function setTipoCpe(valor) { POS.tipo_cpe = valor; }
+
+function setMedioPago(tipo, btn) {
+    document.querySelectorAll('.medio-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    POS.medio_pago = tipo;
+}
+
+let reconocimiento = null;
+function iniciarVoz() {
+    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+        alert('Tu navegador no soporta comandos por voz');
+        return;
+    }
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    reconocimiento = new SR();
+    reconocimiento.lang = 'es-PE';
+    reconocimiento.continuous = false;
+    reconocimiento.interimResults = false;
+
+    const btn = document.getElementById('btn-voz');
+    btn.textContent = 'REC';
+    btn.style.animation = 'pulse 1s infinite';
+
+    reconocimiento.onresult = function(event) {
+        const texto = event.results[0][0].transcript;
+        document.getElementById('pos-search').value = texto;
+        htmx.trigger(document.getElementById('pos-search'), 'keyup');
+        btn.textContent = 'MIC';
+        btn.style.animation = '';
+    };
+    reconocimiento.onerror = reconocimiento.onend = function() {
+        btn.textContent = 'MIC';
+        btn.style.animation = '';
+    };
+    reconocimiento.start();
+}
+
+function imprimirTicket() {
+    window.print();
+}
+</script>
+
+</body>
+</html>

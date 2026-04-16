@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block title %}Activos Fijos &mdash; Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+
+            <div class="page-header">
+                <a href="/inventario/" class="page-back">&larr; Inventario</a>
+                <div>
+                    <h1 class="page-title">Activos Fijos</h1>
+                    <p class="page-sub">Control y valoracion de activos de la empresa</p>
+                </div>
+                <div style="margin-left:auto;">
+                    <a href="/inventario/activos/nuevo/" class="btn-primary">+ Nuevo Activo</a>
+                </div>
+            </div>
+
+            <div class="form-section">
+                <form method="get" style="display:flex; gap:1rem; flex-wrap:wrap; align-items:flex-end;">
+                    <div class="field">
+                        <label for="categoria">Categoria</label>
+                        <select name="categoria" id="categoria" class="field-select">
+                            <option value="">Todas las categorias</option>
+                            {% for cat in categorias %}
+                            <option value="{{ cat.id }}" {% if request.query_params.get('categoria') == cat.id|string %}selected{% endif %}>
+                                {{ cat.nombre }}
+                            </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label for="search">Buscar</label>
+                        <input type="text" name="search" id="search" placeholder="Codigo o nombre..."
+                               value="{{ request.query_params.get('search', '') }}" class="field-input">
+                    </div>
+                    <div class="field">
+                        <label for="estado_fisico">Estado Fisico</label>
+                        <select name="estado_fisico" id="estado_fisico" class="field-select">
+                            <option value="">Todos</option>
+                            <option value="BUENO" {% if request.query_params.get('estado_fisico') == 'BUENO' %}selected{% endif %}>Bueno</option>
+                            <option value="REGULAR" {% if request.query_params.get('estado_fisico') == 'REGULAR' %}selected{% endif %}>Regular</option>
+                            <option value="MALO" {% if request.query_params.get('estado_fisico') == 'MALO' %}selected{% endif %}>Malo</option>
+                            <option value="DADO_BAJA" {% if request.query_params.get('estado_fisico') == 'DADO_BAJA' %}selected{% endif %}>Dado de Baja</option>
+                        </select>
+                    </div>
+                    <div class="field">
+                        <button type="submit" class="btn-primary">Filtrar</button>
+                        <a href="/inventario/activos/" class="btn-secondary" style="margin-left:.5rem;">Limpiar</a>
+                    </div>
+                </form>
+            </div>
+
+            <div class="table-wrap">
+                {% if activos %}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Codigo</th>
+                            <th>Nombre</th>
+                            <th>Categoria</th>
+                            <th style="text-align:right;">Valor Adq. (S/)</th>
+                            <th style="text-align:right;">Valor Libro (S/)</th>
+                            <th>Estado Fisico</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for activo in activos %}
+                        <tr>
+                            <td><code>{{ activo.codigo }}</code></td>
+                            <td>{{ activo.nombre }}</td>
+                            <td>{{ activo.categoria }}</td>
+                            <td style="text-align:right;">S/ {{ activo.valor_adquisicion|round(2) }}</td>
+                            <td style="text-align:right;">S/ {{ activo.valor_libro|round(2) }}</td>
+                            <td>
+                                {% if activo.estado_fisico == 'BUENO' %}
+                                    <span class="badge badge-ok">Bueno</span>
+                                {% elif activo.estado_fisico == 'REGULAR' %}
+                                    <span class="badge badge-warn">Regular</span>
+                                {% elif activo.estado_fisico == 'MALO' %}
+                                    <span class="badge badge-off">Malo</span>
+                                {% elif activo.estado_fisico == 'DADO_BAJA' %}
+                                    <span class="badge">Dado de Baja</span>
+                                {% else %}
+                                    <span class="badge">{{ activo.estado_fisico }}</span>
+                                {% endif %}
+                            </td>
+                            <td style="display:flex; gap:.5rem;">
+                                <a href="/inventario/activos/{{ activo.id }}/" class="btn-icon">Ver</a>
+                                <button class="btn-icon"
+                                        onclick="pedirSustentoActivo('{{ activo.id }}', '{{ activo.nombre|replace("'", "\\'") }}')"
+                                        title="Pedir sustento">
+                                    Sustento
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                {% else %}
+                <div class="table-empty">
+                    No se encontraron activos fijos con los filtros aplicados.
+                </div>
+                {% endif %}
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script>
+function pedirSustentoActivo(activoId, activoNombre) {
+    if (!confirm('Enviar pedido de sustento para el activo "' + activoNombre + '"?')) return;
+    fetch('/inventario/activos/' + activoId + '/sustento/', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || '',
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+        if (data.ok) {
+            alert('Pedido de sustento enviado correctamente para "' + activoNombre + '".');
+        } else {
+            alert('Error: ' + (data.error || 'No se pudo enviar el pedido.'));
+        }
+    })
+    .catch(function() {
+        alert('Error de conexion. Intente nuevamente.');
+    });
+}
+</script>
+{% endblock %}

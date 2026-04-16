@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Marcas — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            {% if toast %}<div class="toast toast-ok" id="toast">{{ toast }}</div>{% endif %}
+            <div class="page-header">
+                <a href="/catalogo/maestros" class="page-back">← Maestros</a>
+                <h1>Marcas</h1>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 320px;gap:1.5rem;align-items:start">
+
+                <!-- Lista -->
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Nombre</th><th>Estado</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for m in marcas %}
+                            <tr>
+                                <td><strong>{{ m.nombre }}</strong></td>
+                                <td>
+                                    <span class="badge {% if m.activo %}badge-ok{% else %}badge-off{% endif %}">
+                                        {% if m.activo %}Activo{% else %}Inactivo{% endif %}
+                                    </span>
+                                </td>
+                            </tr>
+                            {% else %}
+                            <tr><td colspan="2" class="table-empty">Sin marcas registradas</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Formulario -->
+                <div class="form-section">
+                    <h3 class="section-title">Agregar marca</h3>
+                    <form method="post" action="/catalogo/maestros/marca">
+                        <input type="hidden" name="id" value="">
+                        <div class="field">
+                            <label>Nombre *</label>
+                            <input type="text" name="nombre" required autofocus placeholder="Nike, Samsung...">
+                        </div>
+                        <div class="form-actions" style="margin-top:1rem">
+                            <button type="submit" class="btn-primary">Agregar</button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </main>
+    </div>
+</div>
+<script>const t=document.getElementById('toast');if(t)setTimeout(()=>t.style.opacity='0',3000);</script>
+{% endblock %}

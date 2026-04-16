@@ -1,0 +1,172 @@
+{% extends "base.html" %}
+{% block title %}Responsables — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            {% if toast %}<div class="toast toast-{{ toast_tipo }}" id="toast">{{ toast }}</div>{% endif %}
+
+            <div class="page-header">
+                <a href="/config" class="page-back">&larr; Configuracion</a>
+                <h1>Responsables y Representantes</h1>
+                <span class="page-sub">
+                    Personas con permisos especiales — usados en almacenes, cobros, alertas y apertura de locales
+                </span>
+            </div>
+
+            <!-- Lista actual -->
+            {% if responsables %}
+            <div class="table-wrap" style="margin-bottom:1.5rem">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th><th>DNI</th><th>Cargo</th>
+                            <th>Contacto</th><th>Permisos</th><th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for r in responsables %}
+                        <tr>
+                            <td>
+                                <strong>{{ r.apellidos }}, {{ r.nombres }}</strong>
+                                {% if r.es_representante_legal %}
+                                <span class="badge badge-ok" style="margin-left:0.25rem">Rep. Legal</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ r.dni }}</td>
+                            <td>{{ r.cargo or '&mdash;' }}</td>
+                            <td>
+                                {% if r.celular %}<div>{{ r.celular }}</div>{% endif %}
+                                {% if r.correo %}<div>{{ r.correo }}</div>{% endif %}
+                            </td>
+                            <td>
+                                <div class="permisos-chips">
+                                    {% if r.puede_abrir_local %}<span class="perm-chip">Abre local</span>{% endif %}
+                                    {% if r.puede_anular_ventas %}<span class="perm-chip">Anula ventas</span>{% endif %}
+                                    {% if r.puede_ver_costos %}<span class="perm-chip">Ve costos</span>{% endif %}
+                                    {% if r.recibe_alertas_sunat %}<span class="perm-chip perm-warn">SUNAT</span>{% endif %}
+                                    {% if r.recibe_notificaciones_bancarias %}<span class="perm-chip perm-info">Banco</span>{% endif %}
+                                </div>
+                            </td>
+                            <td>
+                                <span class="badge {% if r.activo %}badge-ok{% else %}badge-off{% endif %}">
+                                    {% if r.activo %}Activo{% else %}Inactivo{% endif %}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endif %}
+
+            <!-- Formulario nuevo responsable -->
+            <form hx-post="/config/responsables" hx-target="body" hx-swap="none"
+                  method="post" action="/config/responsables">
+                <input type="hidden" name="id" value="">
+
+                <div class="form-section">
+                    <h3 class="section-title">Datos Personales</h3>
+                    <div class="form-grid">
+                        <div class="field">
+                            <label>DNI *</label>
+                            <div class="input-group">
+                                <input type="text" name="dni" maxlength="8" required
+                                       id="resp-dni" placeholder="12345678">
+                                <button type="button" class="input-btn"
+                                        onclick="consultarDNI()"
+                                        title="Consultar RENIEC">Buscar</button>
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>Nombres</label>
+                            <input type="text" name="nombres" id="resp-nombres">
+                        </div>
+                        <div class="field">
+                            <label>Apellidos</label>
+                            <input type="text" name="apellidos" id="resp-apellidos">
+                        </div>
+                        <div class="field">
+                            <label>Cargo / Rol</label>
+                            <select name="cargo" class="field-select">
+                                <option value="">— Seleccionar —</option>
+                                <option value="Representante Legal">Representante Legal</option>
+                                <option value="Gerente General">Gerente General</option>
+                                <option value="Administrador">Administrador</option>
+                                <option value="Contador">Contador</option>
+                                <option value="Cajero Principal">Cajero Principal</option>
+                                <option value="Responsable Almacen">Responsable Almacen</option>
+                                <option value="Apoderado">Apoderado</option>
+                                <option value="Supervisor">Supervisor</option>
+                                <option value="Otro">Otro</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>Celular</label>
+                            <input type="text" name="celular" maxlength="12">
+                        </div>
+                        <div class="field">
+                            <label>Correo</label>
+                            <input type="email" name="correo">
+                        </div>
+                        <div class="field field-wide">
+                            <label>Correo notificaciones bancarias</label>
+                            <input type="email" name="correo_notificaciones_banco"
+                                   placeholder="Correo donde llegan alertas del banco">
+                        </div>
+                    </div>
+                    <div class="toggle-grid" style="margin-top:1rem">
+                        <label class="toggle-label">
+                            <input type="checkbox" name="es_representante_legal">
+                            <span>Es Representante Legal</span>
+                        </label>
+                        <label class="toggle-label">
+                            <input type="checkbox" name="activo" checked>
+                            <span>Activo</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-section">
+                    <h3 class="section-title">Permisos Operativos</h3>
+                    <div class="permisos-grid">
+                        <div class="permiso-grupo">
+                            <h4>Operaciones</h4>
+                            <label class="toggle-label"><input type="checkbox" name="puede_abrir_local"><span>Puede abrir local/anexo</span></label>
+                            <label class="toggle-label"><input type="checkbox" name="puede_cerrar_local"><span>Puede cerrar local/anexo</span></label>
+                            <label class="toggle-label"><input type="checkbox" name="puede_anular_ventas"><span>Puede anular ventas</span></label>
+                            <label class="toggle-label"><input type="checkbox" name="puede_dar_descuentos_especiales"><span>Puede dar descuentos especiales</span></label>
+                            <label class="toggle-label"><input type="checkbox" name="puede_ver_costos"><span>Puede ver costos</span></label>
+                        </div>
+                        <div class="permiso-grupo">
+                            <h4>Alertas que recibe</h4>
+                            <label class="toggle-label"><input type="checkbox" name="recibe_alertas_sunat"><span>Alertas SUNAT</span></label>
+                            <label class="toggle-label"><input type="checkbox" name="recibe_alertas_sunafil"><span>Alertas SUNAFIL</span></label>
+                            <label class="toggle-label"><input type="checkbox" name="recibe_alertas_municipio"><span>Alertas Municipio</span></label>
+                            <label class="toggle-label"><input type="checkbox" name="recibe_alertas_stock"><span>Alertas de stock</span></label>
+                            <label class="toggle-label"><input type="checkbox" name="recibe_alertas_caja"><span>Alertas de caja</span></label>
+                            <label class="toggle-label"><input type="checkbox" name="recibe_notificaciones_bancarias"><span>Notificaciones bancarias</span></label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn-primary">Guardar responsable</button>
+                </div>
+            </form>
+        </main>
+    </div>
+</div>
+
+<script>
+async function consultarDNI() {
+    const dni = document.getElementById('resp-dni').value;
+    if (dni.length !== 8) return alert('DNI debe tener 8 digitos');
+    alert('API DNI se configurara cuando actives la integracion RENIEC en Configuracion > Integraciones');
+}
+const toast = document.getElementById('toast');
+if (toast) setTimeout(() => toast.style.opacity = '0', 3000);
+</script>
+{% endblock %}

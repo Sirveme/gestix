@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block title %}Ingresar — Gestix{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+    <div class="orb orb-cyan" style="top:-100px;left:-100px;opacity:0.2"></div>
+    <div class="orb orb-violet" style="bottom:-100px;right:-100px;opacity:0.15"></div>
+    <div class="home-grid"></div>
+
+    <div class="auth-box">
+        <a href="/" class="auth-back">← Inicio</a>
+
+        <div class="auth-logo">
+            <span class="logo-g">G</span>estix
+        </div>
+        <p class="auth-tagline">ERP Inteligente Peruano</p>
+
+        {% if error %}
+        <div class="auth-error">{{ error }}</div>
+        {% endif %}
+
+        <form method="post" action="/login" class="auth-form">
+            <div class="field">
+                <label>Usuario o correo</label>
+                <input type="text" name="usuario" placeholder="correo@empresa.com"
+                       autocomplete="username" required autofocus>
+            </div>
+            <div class="field">
+                <label>Contraseña</label>
+                <input type="password" name="clave" placeholder="••••••••"
+                       autocomplete="current-password" required>
+            </div>
+            <button type="submit" class="btn-primary btn-full">
+                Ingresar al sistema →
+            </button>
+        </form>
+
+        <p class="auth-help">
+            ¿Necesitas acceso?
+            <a href="https://wa.me/51999999999" target="_blank">Escríbenos</a>
+        </p>
+    </div>
+</div>
+{% endblock %}
