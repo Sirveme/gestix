@@ -3,7 +3,14 @@ from fastapi.responses import RedirectResponse
 from app.auth.utils import decodificar_token
 
 RUTAS_PUBLICAS_EXACTAS = {"/", "/login", "/ping", "/logout", "/seleccionar-empresa"}
-RUTAS_PUBLICAS_PREFIJOS = ["/static/", "/seleccionar-empresa/confirmar"]
+RUTAS_PUBLICAS_PREFIJOS = [
+    "/static/",
+    "/landing",
+    "/home",
+    "/ping",
+    "/api/pixel",
+    "/seleccionar-empresa/confirmar",
+]
 
 
 async def auth_middleware(request: Request, call_next):
