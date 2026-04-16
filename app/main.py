@@ -71,3 +71,13 @@ async def home(request: Request):
 @app.get("/ping")
 async def ping():
     return {"status": "ok", "version": settings.APP_VERSION, "producto": "Gestix"}
+
+
+from pathlib import Path
+from fastapi.staticfiles import StaticFiles
+
+BASE_DIR = Path(__file__).parent  # apunta a app/
+app.mount("/landing", StaticFiles(
+    directory=str(BASE_DIR / "static" / "landing"), 
+    html=True
+), name="landing")
