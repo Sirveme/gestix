@@ -45,9 +45,19 @@ class CuentaContable(Base):
     activo = Column(Boolean, default=True)
     es_pcge_oficial = Column(Boolean, default=True)
 
-    hijos = relationship("CuentaContable",
-                        foreign_keys=[id_padre],
-                        backref="padre_rel")
+    hijos = relationship(
+        "CuentaContable",
+        primaryjoin="CuentaContable.id_padre == CuentaContable.id",
+        foreign_keys="[CuentaContable.id_padre]",
+        back_populates="padre_rel",
+    )
+    padre_rel = relationship(
+        "CuentaContable",
+        primaryjoin="CuentaContable.id_padre == CuentaContable.id",
+        foreign_keys="[CuentaContable.id_padre]",
+        back_populates="hijos",
+        remote_side="[CuentaContable.id]",
+    )
 
 
 # -----------------------------------------
