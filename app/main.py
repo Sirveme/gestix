@@ -1,3 +1,4 @@
+from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -5,6 +6,8 @@ from fastapi.responses import HTMLResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from contextlib import asynccontextmanager
 from app.config import settings
+
+BASE_DIR = Path(__file__).parent  # apunta a app/
 from app.database import init_db
 from app.migrations.runner import ejecutar_migraciones_pendientes
 from app.auth.middleware import auth_middleware
@@ -51,8 +54,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.add_middleware(BaseHTTPMiddleware, dispatch=auth_middleware)
+
+# -- Routers --
 app.include_router(auth_router)
 app.include_router(config_router)
 app.include_router(catalogo_router)
@@ -73,11 +77,9 @@ async def ping():
     return {"status": "ok", "version": settings.APP_VERSION, "producto": "Gestix"}
 
 
-from pathlib import Path
-from fastapi.staticfiles import StaticFiles
-
-BASE_DIR = Path(__file__).parent  # apunta a app/
+# -- Static mounts (al final, después de routers y rutas) --
+app.mount("/static", StaticFiles(directory="app/static"), name="static")
 app.mount("/landing", StaticFiles(
-    directory=str(BASE_DIR / "static" / "landing"), 
+    directory=str(BASE_DIR / "static" / "landing"),
     html=True
 ), name="landing")
