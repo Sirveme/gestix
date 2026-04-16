@@ -1,4 +1,5 @@
 from pydantic_settings import BaseSettings
+from pydantic import field_validator
 from functools import lru_cache
 import os
 
@@ -10,6 +11,15 @@ class Settings(BaseSettings):
     # Base de datos
     DATABASE_URL: str = "postgresql+asyncpg://erp:erp@localhost:5432/erpro"
     DATABASE_URL_SYNC: str = "postgresql://erp:erp@localhost:5432/erpro"
+
+    @field_validator("DATABASE_URL", mode="before")
+    @classmethod
+    def asegurar_asyncpg(cls, v: str) -> str:
+        if v.startswith("postgres://"):
+            v = v.replace("postgres://", "postgresql+asyncpg://", 1)
+        elif v.startswith("postgresql://"):
+            v = v.replace("postgresql://", "postgresql+asyncpg://", 1)
+        return v
 
     # Sistema
     SECRET_KEY: str = "cambiar-en-produccion-usar-secrets-token-hex-32"
