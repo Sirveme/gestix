@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestix — ERP Inteligente para empresas peruanas</title>
+<meta name="description" content="Sistema ERP completo para distribuidoras, empresas comerciales y estudios contables del Perú. Inventario, ventas, compras y contabilidad integrados.">
+<style>
+  :root {
+    --rojo: #8B0000;
+    --rojo-oscuro: #5a0000;
+    --rojo-medio: #a00000;
+    --dorado: #f0a500;
+    --dorado-claro: #ffc93c;
+    --blanco: #ffffff;
+    --bg-oscuro: #0d0000;
+    --texto-oscuro: #1a0000;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg-oscuro); color: var(--blanco); overflow-x: hidden; }
+
+  /* NAV */
+  nav { position: fixed; top: 0; left: 0; right: 0; z-index: 100; background: var(--rojo-oscuro); border-bottom: 2px solid var(--dorado); padding: 0.9rem 2rem; display: flex; align-items: center; justify-content: space-between; }
+  .nav-logo { font-size: 1.4rem; font-weight: 900; letter-spacing: -0.02em; color: var(--blanco); }
+  .nav-logo span { color: var(--dorado); }
+  .nav-links { display: flex; gap: 2rem; align-items: center; list-style: none; }
+  .nav-links a { color: rgba(255,255,255,0.8); text-decoration: none; font-size: 0.9rem; font-weight: 500; transition: color 0.2s; }
+  .nav-links a:hover { color: var(--dorado); }
+  .nav-cta { background: var(--dorado) !important; color: var(--texto-oscuro) !important; padding: 0.6rem 1.25rem; border-radius: 6px; font-weight: 700 !important; }
+
+  /* HERO */
+  .hero {
+    min-height: 100vh;
+    background: repeating-linear-gradient(45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 12px), linear-gradient(160deg, var(--rojo) 0%, var(--rojo-oscuro) 60%, var(--bg-oscuro) 100%);
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 7rem 2rem 4rem; text-align: center; position: relative; overflow: hidden;
+  }
+  .hero::before { content: ''; position: absolute; bottom: -2px; left: 0; right: 0; height: 80px; background: linear-gradient(to bottom, transparent, var(--bg-oscuro)); }
+
+  .hero-badge { display: inline-flex; align-items: center; gap: 0.4rem; background: rgba(240,165,0,0.15); border: 1px solid rgba(240,165,0,0.4); color: var(--dorado-claro); font-size: 0.75rem; font-weight: 700; padding: 0.4rem 1rem; border-radius: 100px; margin-bottom: 2rem; letter-spacing: 0.08em; text-transform: uppercase; }
+
+  .hero h1 { font-size: clamp(2.5rem, 7vw, 5rem); font-weight: 900; line-height: 1; letter-spacing: -0.03em; text-transform: uppercase; margin-bottom: 1.5rem; }
+  .hero h1 .dorado { color: var(--dorado); display: block; }
+
+  .hero-sub { font-size: clamp(1rem, 2.5vw, 1.3rem); color: rgba(255,255,255,0.75); max-width: 620px; margin: 0 auto 1rem; font-style: italic; }
+  .hero-desc { font-size: 1rem; color: rgba(255,255,255,0.6); max-width: 580px; margin: 0 auto 2.5rem; line-height: 1.7; }
+
+  .hero-btns { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; margin-bottom: 3.5rem; }
+  .btn-dorado { display: inline-flex; align-items: center; gap: 0.5rem; background: var(--dorado); color: var(--texto-oscuro); padding: 1rem 2rem; border-radius: 8px; font-weight: 800; font-size: 1rem; text-decoration: none; text-transform: uppercase; letter-spacing: 0.05em; transition: background 0.2s, transform 0.1s; }
+  .btn-dorado:hover { background: var(--dorado-claro); transform: translateY(-2px); }
+  .btn-borde { display: inline-flex; align-items: center; gap: 0.5rem; background: transparent; color: var(--blanco); padding: 1rem 2rem; border-radius: 8px; font-weight: 700; font-size: 1rem; text-decoration: none; border: 2px solid rgba(255,255,255,0.3); text-transform: uppercase; letter-spacing: 0.05em; transition: border-color 0.2s, color 0.2s; }
+  .btn-borde:hover { border-color: var(--dorado); color: var(--dorado); }
+
+  .stats { display: flex; gap: 3rem; flex-wrap: wrap; justify-content: center; }
+  .stat { text-align: center; }
+  .stat-val { font-size: 2.2rem; font-weight: 900; color: var(--dorado); letter-spacing: -0.03em; line-height: 1; }
+  .stat-lbl { font-size: 0.7rem; font-weight: 700; color: rgba(255,255,255,0.5); text-transform: uppercase; letter-spacing: 0.1em; margin-top: 0.25rem; }
+
+  /* SECCIONES */
+  section { padding: 5rem 2rem; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .sec-label { font-size: 0.75rem; font-weight: 700; color: var(--dorado); text-transform: uppercase; letter-spacing: 0.1em; margin-bottom: 0.75rem; }
+  .sec-title { font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 900; line-height: 1.1; text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 1rem; }
+  .sec-title span { color: var(--dorado); }
+  .sec-desc { font-size: 1.05rem; color: rgba(255,255,255,0.6); max-width: 580px; line-height: 1.7; margin-bottom: 3rem; }
+
+  /* MÓDULOS */
+  .features-section { background: linear-gradient(180deg, var(--bg-oscuro) 0%, #1a0500 100%); }
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 1.25rem; }
+  .feature-card { background: rgba(139,0,0,0.15); border: 1px solid rgba(139,0,0,0.4); border-radius: 12px; padding: 1.5rem; transition: border-color 0.2s, transform 0.2s; }
+  .feature-card:hover { border-color: var(--dorado); transform: translateY(-3px); }
+  .feature-icon { font-size: 2rem; margin-bottom: 0.75rem; }
+  .feature-card h3 { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: var(--dorado); margin-bottom: 0.5rem; }
+  .feature-card p { font-size: 0.875rem; color: rgba(255,255,255,0.6); line-height: 1.6; }
+
+  /* SCAN */
+  .scan-section { background: var(--rojo-oscuro); border-top: 2px solid var(--dorado); border-bottom: 2px solid var(--dorado); }
+  .scan-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; align-items: center; }
+  .semaforo-demo { display: flex; flex-direction: column; gap: 0.75rem; }
+  .sem-row { display: flex; align-items: center; gap: 1rem; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 0.85rem 1.25rem; }
+  .sem-dot { width: 14px; height: 14px; border-radius: 50%; flex-shrink: 0; }
+  .sem-verde { background: #00cc66; box-shadow: 0 0 8px #00cc66; }
+  .sem-amarillo { background: #ffaa00; box-shadow: 0 0 8px #ffaa00; }
+  .sem-rojo { background: #ff3333; box-shadow: 0 0 8px #ff3333; }
+  .sem-texto { flex: 1; }
+  .sem-titulo { font-size: 0.85rem; font-weight: 700; }
+  .sem-sub { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+  .sem-accion { font-size: 0.7rem; color: var(--dorado); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* ROLES */
+  .roles-section { background: var(--bg-oscuro); }
+  .roles-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+  .role-card { border-radius: 12px; padding: 2rem 1.5rem; text-align: center; }
+  .role-card.tecnico { background: rgba(139,0,0,0.2); border: 1px solid rgba(139,0,0,0.5); }
+  .role-card.contador { background: rgba(240,165,0,0.1); border: 1px solid rgba(240,165,0,0.3); }
+  .role-card.empresario { background: rgba(0,100,200,0.1); border: 1px solid rgba(0,100,200,0.3); }
+  .role-icon { font-size: 2.5rem; margin-bottom: 1rem; }
+  .role-card h3 { font-size: 1rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; }
+  .role-card.tecnico h3 { color: #ff6666; }
+  .role-card.contador h3 { color: var(--dorado); }
+  .role-card.empresario h3 { color: #66aaff; }
+  .role-card p { font-size: 0.875rem; color: rgba(255,255,255,0.6); line-height: 1.6; }
+
+  /* ECOSISTEMA */
+  .eco-section { background: linear-gradient(180deg, #1a0500 0%, var(--rojo-oscuro) 100%); border-top: 2px solid rgba(240,165,0,0.2); }
+  .eco-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem; }
+  .eco-card { background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 1.25rem; text-align: center; transition: border-color 0.2s; text-decoration: none; color: var(--blanco); display: block; }
+  .eco-card:hover, .eco-card.activo { border-color: rgba(240,165,0,0.4); }
+  .eco-nombre { font-size: 0.9rem; font-weight: 800; color: var(--dorado); margin-bottom: 0.35rem; }
+  .eco-desc { font-size: 0.75rem; color: rgba(255,255,255,0.5); }
+  .eco-badge { display: inline-block; margin-top: 0.5rem; font-size: 0.65rem; font-weight: 700; padding: 0.2rem 0.5rem; border-radius: 100px; text-transform: uppercase; }
+  .badge-live { background: rgba(0,204,102,0.15); color: #00cc66; }
+  .badge-soon { background: rgba(255,255,255,0.08); color: rgba(255,255,255,0.4); }
+
+  /* CTA */
+  .cta-section { background: repeating-linear-gradient(-45deg, rgba(255,255,255,0.015) 0px, rgba(255,255,255,0.015) 1px, transparent 1px, transparent 12px), var(--rojo); text-align: center; padding: 6rem 2rem; }
+  .cta-section h2 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 900; text-transform: uppercase; letter-spacing: -0.02em; margin-bottom: 1rem; line-height: 1.1; }
+  .cta-section h2 span { color: var(--dorado); }
+  .cta-section p { font-size: 1.1rem; color: rgba(255,255,255,0.75); margin-bottom: 2.5rem; max-width: 500px; margin-left: auto; margin-right: auto; }
+  .cta-btns { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+
+  /* FOOTER */
+  footer { background: var(--bg-oscuro); border-top: 1px solid rgba(240,165,0,0.2); padding: 2rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; }
+  .footer-logo { font-size: 1.1rem; font-weight: 900; }
+  .footer-logo span { color: var(--dorado); }
+  .footer-links { display: flex; gap: 1.5rem; flex-wrap: wrap; }
+  .footer-links a { color: rgba(255,255,255,0.4); font-size: 0.8rem; text-decoration: none; }
+  .footer-links a:hover { color: var(--dorado); }
+  .footer-copy { font-size: 0.75rem; color: rgba(255,255,255,0.3); }
+
+  @media (max-width: 768px) {
+    .nav-links { display: none; }
+    .scan-grid, .roles-grid { grid-template-columns: 1fr; }
+    footer { flex-direction: column; text-align: center; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">GESTIX<span>.PRO</span></span>
+  <ul class="nav-links">
+    <li><a href="#modulos">Módulos</a></li>
+    <li><a href="#scan">Diagnóstico</a></li>
+    <li><a href="#roles">¿Para quién?</a></li>
+    <li><a href="https://info.gestix.pro">Ver demos</a></li>
+    <li><a href="/login" class="nav-cta">▶ Ingresar</a></li>
+  </ul>
+</nav>
+
+<div class="hero">
+  <div class="hero-badge">📍 Hecho en Iquitos · Para todo el Perú</div>
+  <h1>ERP PARA<br><span class="dorado">EL PERÚ REAL</span></h1>
+  <p class="hero-sub">Gestión Inteligente para empresas que trabajan de verdad</p>
+  <p class="hero-desc">Inventario, ventas, compras y contabilidad integrados en un solo sistema. Compatible con SUNAT, sin letra chica, a precio justo.</p>
+  <div class="hero-btns">
+    <a href="https://info.gestix.pro" class="btn-dorado">★ Ver demos en video</a>
+    <a href="https://wa.me/51967317946?text=Hola%2C%20quiero%20información%20sobre%20Gestix" class="btn-borde" target="_blank">💬 Consultar por WhatsApp</a>
+  </div>
+  <div class="stats">
+    <div class="stat"><div class="stat-val">7</div><div class="stat-lbl">Módulos integrados</div></div>
+    <div class="stat"><div class="stat-val">SUNAT</div><div class="stat-lbl">100% compatible</div></div>
+    <div class="stat"><div class="stat-val">5 MIN</div><div class="stat-lbl">Para empezar</div></div>
+    <div class="stat"><div class="stat-val">S/150</div><div class="stat-lbl">Desde este precio</div></div>
+  </div>
+</div>
+
+<section class="features-section" id="modulos">
+  <div class="container">
+    <div class="sec-label">Lo que incluye</div>
+    <h2 class="sec-title">TODO LO QUE TU <span>NEGOCIO</span> NECESITA</h2>
+    <p class="sec-desc">Cada módulo trabaja junto. Lo que vendes sale del inventario. Lo que compras entra a contabilidad. Sin doble trabajo, sin errores.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">📦</div>
+        <h3>Inventario y Kardex</h3>
+        <p>Control de stock en tiempo real. Corte de inventario a cualquier fecha en segundos. Tomas físicas con ajuste automático.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🖥️</div>
+        <h3>Punto de Venta</h3>
+        <p>POS con voz en español peruano, scanner de código de barra y múltiples precios por tipo de cliente. Factura electrónica integrada.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🛒</div>
+        <h3>Compras</h3>
+        <p>Registro de facturas con lectura automática por IA. Órdenes de compra, aprobaciones y nota de mercadería inteligente.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">📒</div>
+        <h3>Contabilidad</h3>
+        <p>PCGE peruano precargado. Asientos automáticos desde ventas y compras. Cálculo PDT 621, cruce SIRE y conciliación bancaria.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🏛️</div>
+        <h3>Facturación Electrónica</h3>
+        <p>Boletas y facturas via Facturalo.pro. Envío a SUNAT en tiempo real. Modo offline para zonas sin internet continuo.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">👥</div>
+        <h3>Multi-empresa</h3>
+        <p>Un contador maneja hasta 60 empresas desde un solo sistema. Cada empresa con sus propios datos y configuración.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="scan-section" id="scan">
+  <div class="container">
+    <div class="scan-grid">
+      <div>
+        <div class="sec-label">Exclusivo Gestix</div>
+        <h2 class="sec-title">SCAN <span>DIAGNÓSTICO</span></h2>
+        <p class="sec-desc" style="margin-bottom:1.5rem">Como el escáner de un auto. Un click y el sistema te dice qué está fallando, qué falta, quién debe resolverlo y cómo. Sin buscar, sin preguntar.</p>
+        <p style="font-size:0.875rem;color:rgba(255,255,255,0.5);line-height:1.9">
+          Para cada hallazgo el sistema responde:<br>
+          <strong style="color:var(--dorado)">¿Qué falta?</strong> ·
+          <strong style="color:var(--dorado)">¿Cómo conseguirlo?</strong> ·
+          <strong style="color:var(--dorado)">¿Quién debe darlo?</strong> ·
+          <strong style="color:var(--dorado)">¿Quién es responsable?</strong>
+        </p>
+      </div>
+      <div class="semaforo-demo">
+        <div class="sem-row">
+          <div class="sem-dot sem-verde"></div>
+          <div class="sem-texto"><div class="sem-titulo">Ventas</div><div class="sem-sub">Todos los comprobantes emitidos</div></div>
+          <div class="sem-accion">OK</div>
+        </div>
+        <div class="sem-row">
+          <div class="sem-dot sem-amarillo"></div>
+          <div class="sem-texto"><div class="sem-titulo">Compras por aprobar</div><div class="sem-sub">3 facturas pendientes de revisión</div></div>
+          <div class="sem-accion">→ Revisar</div>
+        </div>
+        <div class="sem-row">
+          <div class="sem-dot sem-rojo"></div>
+          <div class="sem-texto"><div class="sem-titulo">Declaración pendiente</div><div class="sem-sub">PDT 621 de abril sin presentar</div></div>
+          <div class="sem-accion">→ Urgente</div>
+        </div>
+        <div class="sem-row">
+          <div class="sem-dot sem-amarillo"></div>
+          <div class="sem-texto"><div class="sem-titulo">Stock negativo</div><div class="sem-sub">2 productos vendidos sin ingreso</div></div>
+          <div class="sem-accion">→ Regularizar</div>
+        </div>
+        <div class="sem-row">
+          <div class="sem-dot sem-verde"></div>
+          <div class="sem-texto"><div class="sem-titulo">Bancario</div><div class="sem-sub">Movimientos conciliados</div></div>
+          <div class="sem-accion">OK</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="roles-section" id="roles">
+  <div class="container">
+    <div class="sec-label" style="text-align:center">Diseñado para tres roles</div>
+    <h2 class="sec-title" style="text-align:center">CADA UNO VE <span>LO QUE NECESITA</span></h2>
+    <p class="sec-desc" style="text-align:center;margin:0 auto 3rem">El mismo sistema, tres experiencias distintas según el rol.</p>
+    <div class="roles-grid">
+      <div class="role-card tecnico">
+        <div class="role-icon">⚙️</div>
+        <h3>Técnico / Asistente</h3>
+        <p>Opera el sistema, registra ventas y compras. El sistema le guía paso a paso con validaciones automáticas.</p>
+      </div>
+      <div class="role-card contador">
+        <div class="role-icon">📊</div>
+        <h3>Contador</h3>
+        <p>Supervisa, previene y planifica. El SCAN le dice exactamente qué falta en cada empresa antes del vencimiento.</p>
+      </div>
+      <div class="role-card empresario">
+        <div class="role-icon">🏢</div>
+        <h3>Empresario / Gerente</h3>
+        <p>Toma decisiones con información en tiempo real. Ve ventas, stock, caja y alertas críticas desde cualquier dispositivo.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="eco-section">
+  <div class="container">
+    <div class="sec-label">Parte de un ecosistema</div>
+    <h2 class="sec-title">HECHO POR <span>PERÚ SISTEMAS .PRO</span></h2>
+    <p class="sec-desc">Gestix es el ERP del ecosistema. Se integra nativamente con todos los productos de la familia.</p>
+    <div class="eco-grid">
+      <div class="eco-card activo">
+        <div class="eco-nombre">GESTIX.PRO</div>
+        <div class="eco-desc">ERP completo para empresas</div>
+        <div class="eco-badge badge-live">✓ En vivo</div>
+      </div>
+      <a href="https://facturalo.pro" class="eco-card activo" target="_blank">
+        <div class="eco-nombre">FACTURALO.PRO</div>
+        <div class="eco-desc">Facturación electrónica SUNAT</div>
+        <div class="eco-badge badge-live">✓ En vivo</div>
+      </a>
+      <a href="https://quevendi.pro" class="eco-card activo" target="_blank">
+        <div class="eco-nombre">QUEVENDI.PRO</div>
+        <div class="eco-desc">POS para bodegas y retail</div>
+        <div class="eco-badge badge-live">✓ En vivo</div>
+      </a>
+      <div class="eco-card">
+        <div class="eco-nombre">METRAES.COM</div>
+        <div class="eco-desc">POS para restaurantes</div>
+        <div class="eco-badge badge-soon">Próximamente</div>
+      </div>
+      <a href="https://alerta.pe" class="eco-card activo" target="_blank">
+        <div class="eco-nombre">ALERTA.PE</div>
+        <div class="eco-desc">Alertas tributarias y contables</div>
+        <div class="eco-badge badge-live">✓ En vivo</div>
+      </a>
+      <div class="eco-card activo">
+        <div class="eco-nombre">COLEGIOS.PRO</div>
+        <div class="eco-desc">Para colegios profesionales</div>
+        <div class="eco-badge badge-live">✓ En vivo</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section class="cta-section">
+  <h2>¿LISTO PARA VER<br><span>GESTIX EN ACCIÓN?</span></h2>
+  <p>Agendemos una demo en vivo. Sin costo, sin compromiso. Hablamos en confianza.</p>
+  <div class="cta-btns">
+    <a href="https://info.gestix.pro" class="btn-dorado">★ Ver videos de demo</a>
+    <a href="https://wa.me/51967317946?text=Hola%2C%20quiero%20una%20demo%20de%20Gestix" class="btn-borde" target="_blank">💬 WhatsApp directo</a>
+  </div>
+</section>
+
+<footer>
+  <span class="footer-logo">GESTIX<span>.PRO</span></span>
+  <div class="footer-links">
+    <a href="https://perusistemas.pro" target="_blank">Perú Sistemas .Pro</a>
+    <a href="https://facturalo.pro" target="_blank">Facturalo.pro</a>
+    <a href="https://info.gestix.pro">Demos</a>
+    <a href="/login">Ingresar al sistema</a>
+  </div>
+  <span class="footer-copy">Hecho en Iquitos, Loreto · IA potenciada por Claude · Anthropic</span>
+</footer>
+
+</body>
+</html>
