@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gestix — Gestión Inteligente para empresas peruanas</title>
+<meta name="description" content="ERP moderno para distribuidoras, empresas comerciales y estudios contables del Perú.">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --bg2: #111118;
+    --bg3: #1a1a24;
+    --border: rgba(255,255,255,0.08);
+    --cyan: #00d4ff;
+    --violet: #7c3aed;
+    --green: #00ff88;
+    --orange: #ff6b35;
+    --text: #f0f0f5;
+    --text2: #9999aa;
+    --text3: #555566;
+    --grad: linear-gradient(135deg, #00d4ff, #7c3aed);
+    --radio: 12px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+
+  /* NAV */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(10,10,15,0.9);
+    backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+    padding: 1rem 2rem;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-logo {
+    font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em;
+    background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .nav-tag { font-size: 0.75rem; color: var(--text3); }
+
+  /* HERO */
+  .hero {
+    padding: 8rem 2rem 4rem;
+    max-width: 900px; margin: 0 auto; text-align: center;
+  }
+  .hero-badge {
+    display: inline-block;
+    background: rgba(0,212,255,0.1); border: 1px solid rgba(0,212,255,0.2);
+    color: var(--cyan); font-size: 0.8rem; font-weight: 600;
+    padding: 0.35rem 1rem; border-radius: 100px; margin-bottom: 1.5rem;
+    letter-spacing: 0.05em; text-transform: uppercase;
+  }
+  .hero h1 {
+    font-size: clamp(2rem, 5vw, 3.5rem);
+    font-weight: 800; letter-spacing: -0.03em; line-height: 1.1;
+    margin-bottom: 1.25rem;
+  }
+  .hero h1 span { background: var(--grad); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+  .hero p {
+    font-size: 1.1rem; color: var(--text2); max-width: 580px;
+    margin: 0 auto 2rem;
+  }
+
+  /* VISITOR BADGE */
+  .visitor-card {
+    display: none;
+    background: rgba(0,212,255,0.05); border: 1px solid rgba(0,212,255,0.2);
+    border-radius: var(--radio); padding: 0.75rem 1.25rem;
+    font-size: 0.875rem; color: var(--cyan);
+    margin-bottom: 2rem; text-align: left;
+    max-width: 500px; margin-left: auto; margin-right: auto;
+  }
+  .visitor-card.show { display: block; }
+  .visitor-card strong { color: var(--text); }
+
+  /* VIDEOS SECTION */
+  .videos-section {
+    max-width: 860px; margin: 0 auto; padding: 0 2rem 4rem;
+  }
+  .section-title {
+    font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em;
+    color: var(--text3); font-weight: 600; margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  /* VIDEO CARD */
+  .video-card {
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden; margin-bottom: 1.25rem;
+    transition: border-color 0.2s;
+  }
+  .video-card:hover { border-color: rgba(0,212,255,0.2); }
+
+  .video-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1.25rem 1.5rem; cursor: pointer; user-select: none;
+  }
+  .video-header-left { display: flex; align-items: center; gap: 1rem; }
+  .video-num {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: var(--bg3); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.8rem; font-weight: 700; color: var(--cyan);
+    flex-shrink: 0;
+  }
+  .video-num.unlocked { background: rgba(0,212,255,0.1); border-color: rgba(0,212,255,0.3); }
+  .video-num.locked { color: var(--text3); }
+  .video-info strong { display: block; font-size: 1rem; }
+  .video-info span { font-size: 0.8rem; color: var(--text2); }
+  .video-toggle { font-size: 0.8rem; color: var(--text3); transition: transform 0.3s; }
+  .video-toggle.open { transform: rotate(180deg); }
+
+  .video-body { display: none; padding: 0 1.5rem 1.5rem; }
+  .video-body.open { display: block; }
+
+  /* VIDEO EMBED */
+  .video-embed {
+    position: relative; padding-bottom: 56.25%; height: 0;
+    background: var(--bg3); border-radius: 10px; overflow: hidden;
+    margin-bottom: 1rem;
+  }
+  .video-embed iframe {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    border: none;
+  }
+  .video-placeholder {
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 1rem; color: var(--text3);
+  }
+  .play-icon {
+    width: 64px; height: 64px; background: rgba(0,212,255,0.1);
+    border: 2px solid rgba(0,212,255,0.2); border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.5rem; color: var(--cyan);
+  }
+
+  /* GATE / CONDICIÓN */
+  .gate-box {
+    background: var(--bg3); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .gate-box h4 { font-size: 0.95rem; margin-bottom: 0.35rem; }
+  .gate-box p { font-size: 0.85rem; color: var(--text2); margin-bottom: 1rem; }
+  .gate-input {
+    width: 100%; padding: 0.75rem 1rem;
+    background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text); font-size: 0.95rem;
+    margin-bottom: 0.75rem; outline: none; transition: border-color 0.2s;
+  }
+  .gate-input:focus { border-color: var(--cyan); }
+  .gate-row { display: flex; gap: 0.75rem; }
+  .gate-row .gate-input { flex: 1; }
+  .btn-unlock {
+    width: 100%; padding: 0.85rem;
+    background: var(--grad); color: var(--bg);
+    border: none; border-radius: 8px; font-weight: 700; font-size: 0.95rem;
+    cursor: pointer; transition: opacity 0.2s;
+  }
+  .btn-unlock:hover { opacity: 0.85; }
+  .gate-error { font-size: 0.8rem; color: var(--orange); margin-top: 0.5rem; display: none; }
+
+  /* PROGRESS BAR de video */
+  .video-progress {
+    height: 3px; background: var(--bg3); border-radius: 100px;
+    margin-top: 0.5rem; overflow: hidden; display: none;
+  }
+  .video-progress.show { display: block; }
+  .video-progress-bar {
+    height: 100%; background: var(--grad); border-radius: 100px;
+    width: 0%; transition: width 0.5s;
+  }
+  .video-stats {
+    display: flex; gap: 1rem; font-size: 0.75rem; color: var(--text3);
+    margin-top: 0.5rem;
+  }
+
+  /* CTA */
+  .cta-section {
+    text-align: center; padding: 3rem 2rem 5rem;
+    max-width: 600px; margin: 0 auto;
+  }
+  .cta-section h2 { font-size: 1.75rem; font-weight: 800; margin-bottom: 1rem; }
+  .cta-section p { color: var(--text2); margin-bottom: 2rem; }
+  .btn-cta {
+    display: inline-flex; align-items: center; gap: 0.5rem;
+    padding: 1rem 2rem; background: var(--grad); color: var(--bg);
+    border: none; border-radius: var(--radio); font-weight: 700; font-size: 1rem;
+    cursor: pointer; text-decoration: none;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border);
+    padding: 1.5rem 2rem; text-align: center;
+    font-size: 0.8rem; color: var(--text3);
+  }
+
+  @media (max-width: 600px) {
+    .hero { padding: 6rem 1rem 3rem; }
+    .videos-section { padding: 0 1rem 3rem; }
+    .gate-row { flex-direction: column; }
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <span class="nav-logo">Gestix</span>
+  <span class="nav-tag">Gestión Inteligente · Hecho en Perú</span>
+</nav>
+
+<div class="hero">
+  <div class="hero-badge">ERP para empresas peruanas</div>
+  <h1>Tu negocio,<br><span>inteligente</span></h1>
+  <p>Control de inventario, ventas, compras y contabilidad — todo en uno, desde cualquier dispositivo.</p>
+
+  <div class="visitor-card" id="visitor-card">
+    Bienvenido, <strong id="visitor-nombre">visitante</strong> — esta presentación fue preparada especialmente para <strong id="visitor-empresa">tu empresa</strong>.
+  </div>
+</div>
+
+<div class="videos-section">
+  <div class="section-title">Conoce Gestix</div>
+
+  <!-- VIDEO 1: Libre -->
+  <div class="video-card" id="card-1">
+    <div class="video-header" onclick="toggleVideo(1)">
+      <div class="video-header-left">
+        <div class="video-num unlocked" id="num-1">1</div>
+        <div class="video-info">
+          <strong>Quién soy y por qué construí Gestix</strong>
+          <span>Presentación personal · Sin condiciones</span>
+        </div>
+      </div>
+      <span class="video-toggle" id="toggle-1">▼</span>
+    </div>
+    <div class="video-body" id="body-1">
+      <div class="video-embed" id="embed-1">
+        <!-- REEMPLAZAR src con la URL real del video -->
+        <iframe id="iframe-1"
+          src="https://www.youtube.com/embed/VIDEO_ID_1?enablejsapi=1&rel=0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowfullscreen>
+        </iframe>
+      </div>
+      <div class="video-progress show" id="prog-1"><div class="video-progress-bar" id="progbar-1"></div></div>
+      <div class="video-stats" id="stats-1"><span id="stat-1">0% visto</span></div>
+    </div>
+  </div>
+
+  <!-- VIDEO 2: Gate RUC -->
+  <div class="video-card" id="card-2">
+    <div class="video-header" onclick="toggleVideo(2)">
+      <div class="video-header-left">
+        <div class="video-num locked" id="num-2">🔒</div>
+        <div class="video-info">
+          <strong>Gestix en acción: inventario, ventas y facturación</strong>
+          <span>Demo en vivo · Requiere RUC de tu empresa</span>
+        </div>
+      </div>
+      <span class="video-toggle" id="toggle-2">▼</span>
+    </div>
+    <div class="video-body" id="body-2">
+      <div id="gate-2" class="gate-box">
+        <h4>Un paso para continuar</h4>
+        <p>Ingresa el RUC de tu empresa para ver esta demo. Solo tomará un segundo.</p>
+        <input class="gate-input" id="input-ruc" type="text" maxlength="11"
+               placeholder="RUC de tu empresa (11 dígitos)"
+               oninput="this.value=this.value.replace(/\D/g,'')">
+        <div class="gate-error" id="error-ruc">El RUC debe tener 11 dígitos.</div>
+        <button class="btn-unlock" onclick="unlockVideo2()">Ver demo →</button>
+      </div>
+      <div id="video-2-content" style="display:none">
+        <div class="video-embed">
+          <iframe id="iframe-2"
+            src="https://www.youtube.com/embed/VIDEO_ID_2?enablejsapi=1&rel=0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen>
+          </iframe>
+        </div>
+        <div class="video-progress show" id="prog-2"><div class="video-progress-bar" id="progbar-2"></div></div>
+        <div class="video-stats"><span id="stat-2">0% visto</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- VIDEO 3: Gate nombre + cargo -->
+  <div class="video-card" id="card-3">
+    <div class="video-header" onclick="toggleVideo(3)">
+      <div class="video-header-left">
+        <div class="video-num locked" id="num-3">🔒</div>
+        <div class="video-info">
+          <strong>Contabilidad automática y diagnóstico SCAN</strong>
+          <span>Demo avanzada · Para gerentes y contadores</span>
+        </div>
+      </div>
+      <span class="video-toggle" id="toggle-3">▼</span>
+    </div>
+    <div class="video-body" id="body-3">
+      <div id="gate-3" class="gate-box">
+        <h4>¿Con quién tengo el gusto?</h4>
+        <p>Para mostrarte la parte más relevante según tu rol, cuéntame quién eres.</p>
+        <div class="gate-row">
+          <input class="gate-input" id="input-nombre" type="text" placeholder="Tu nombre completo">
+          <input class="gate-input" id="input-cargo" type="text" placeholder="Tu cargo">
+        </div>
+        <button class="btn-unlock" onclick="unlockVideo3()">Ver demo →</button>
+        <div class="gate-error" id="error-nombre">Por favor ingresa tu nombre y cargo.</div>
+      </div>
+      <div id="video-3-content" style="display:none">
+        <div class="video-embed">
+          <iframe id="iframe-3"
+            src="https://www.youtube.com/embed/VIDEO_ID_3?enablejsapi=1&rel=0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowfullscreen>
+          </iframe>
+        </div>
+        <div class="video-progress show" id="prog-3"><div class="video-progress-bar" id="progbar-3"></div></div>
+        <div class="video-stats"><span id="stat-3">0% visto</span></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="cta-section">
+  <h2>¿Listo para ver Gestix en tu empresa?</h2>
+  <p>Agendemos una demo en vivo. Sin costo, sin compromiso.</p>
+  <a class="btn-cta" href="https://wa.me/51XXXXXXXXX?text=Hola%2C%20vi%20los%20videos%20de%20Gestix%20y%20quiero%20una%20demo" target="_blank">
+    📱 Escribir por WhatsApp
+  </a>
+</div>
+
+<footer>
+  Gestix · Gestión Inteligente para empresas peruanas · Hecho en Iquitos, Loreto<br>
+  <span style="color: var(--text3); font-size: 0.75rem; margin-top: 0.25rem; display: inline-block;">
+    IA potenciada por Claude · Anthropic
+  </span>
+</footer>
+
+<script>
+// ─── PIXEL / TRACKING ────────────────────────────────────────────────────────
+const PIXEL_URL = 'https://gestix.pro/api/pixel'; // cambia a tu endpoint real
+
+const state = {
+  ref: '',
+  empresa: '',
+  ruc: '',
+  nombre: '',
+  cargo: '',
+  videos: { 1: 0, 2: 0, 3: 0 },
+  session_id: Math.random().toString(36).substr(2, 12),
+};
+
+function track(evento, datos = {}) {
+  const payload = {
+    evento,
+    session_id: state.session_id,
+    ref: state.ref,
+    empresa: state.empresa,
+    ruc: state.ruc,
+    nombre: state.nombre,
+    cargo: state.cargo,
+    ts: new Date().toISOString(),
+    url: window.location.href,
+    ...datos,
+  };
+  // Beacon para no bloquear
+  if (navigator.sendBeacon) {
+    navigator.sendBeacon(PIXEL_URL, JSON.stringify(payload));
+  } else {
+    fetch(PIXEL_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      keepalive: true,
+    }).catch(() => {});
+  }
+  // También en localStorage para debug
+  const logs = JSON.parse(localStorage.getItem('gestix_track') || '[]');
+  logs.push(payload);
+  localStorage.setItem('gestix_track', JSON.stringify(logs.slice(-50)));
+}
+
+// ─── QR / REF PERSONALIZADO ──────────────────────────────────────────────────
+function initRef() {
+  const params = new URLSearchParams(window.location.search);
+  state.ref = params.get('ref') || params.get('r') || 'directo';
+  state.empresa = params.get('e') || params.get('empresa') || '';
+
+  if (state.empresa) {
+    document.getElementById('visitor-card').classList.add('show');
+    document.getElementById('visitor-empresa').textContent = decodeURIComponent(state.empresa);
+  }
+  if (state.ref !== 'directo') {
+    document.getElementById('visitor-nombre').textContent = 'estimado visitante';
+  }
+
+  track('page_view');
+}
+
+// ─── TOGGLE VIDEO ─────────────────────────────────────────────────────────────
+function toggleVideo(n) {
+  const body = document.getElementById('body-' + n);
+  const toggle = document.getElementById('toggle-' + n);
+  const isOpen = body.classList.contains('open');
+
+  if (!isOpen) {
+    body.classList.add('open');
+    toggle.classList.add('open');
+    track('video_open', { video: n });
+  } else {
+    body.classList.remove('open');
+    toggle.classList.remove('open');
+  }
+}
+
+// Abrir video 1 por defecto
+window.addEventListener('load', () => {
+  initRef();
+  toggleVideo(1);
+});
+
+// ─── GATES ───────────────────────────────────────────────────────────────────
+function unlockVideo2() {
+  const ruc = document.getElementById('input-ruc').value.trim();
+  if (ruc.length !== 11) {
+    document.getElementById('error-ruc').style.display = 'block';
+    return;
+  }
+  document.getElementById('error-ruc').style.display = 'none';
+  state.ruc = ruc;
+
+  document.getElementById('gate-2').style.display = 'none';
+  document.getElementById('video-2-content').style.display = 'block';
+  document.getElementById('num-2').textContent = '2';
+  document.getElementById('num-2').classList.remove('locked');
+  document.getElementById('num-2').classList.add('unlocked');
+
+  track('gate_passed', { gate: 'ruc', ruc: ruc });
+}
+
+function unlockVideo3() {
+  const nombre = document.getElementById('input-nombre').value.trim();
+  const cargo = document.getElementById('input-cargo').value.trim();
+  if (!nombre || !cargo) {
+    document.getElementById('error-nombre').style.display = 'block';
+    return;
+  }
+  document.getElementById('error-nombre').style.display = 'none';
+  state.nombre = nombre;
+  state.cargo = cargo;
+
+  document.getElementById('visitor-card').classList.add('show');
+  document.getElementById('visitor-nombre').textContent = nombre;
+
+  document.getElementById('gate-3').style.display = 'none';
+  document.getElementById('video-3-content').style.display = 'block';
+  document.getElementById('num-3').textContent = '3';
+  document.getElementById('num-3').classList.remove('locked');
+  document.getElementById('num-3').classList.add('unlocked');
+
+  track('gate_passed', { gate: 'identidad', nombre, cargo });
+}
+
+// ─── TRACKING DE PROGRESO DE VIDEO (YouTube API) ──────────────────────────────
+// Carga la API de YouTube
+const tag = document.createElement('script');
+tag.src = 'https://www.youtube.com/iframe_api';
+document.head.appendChild(tag);
+
+const players = {};
+let apiReady = false;
+
+window.onYouTubeIframeAPIReady = function () {
+  apiReady = true;
+  [1, 2, 3].forEach(n => {
+    const iframe = document.getElementById('iframe-' + n);
+    if (!iframe) return;
+    players[n] = new YT.Player('iframe-' + n, {
+      events: {
+        onStateChange: (e) => onPlayerState(e, n),
+      },
+    });
+  });
+};
+
+const intervals = {};
+
+function onPlayerState(event, n) {
+  if (event.data === YT.PlayerState.PLAYING) {
+    track('video_play', { video: n });
+    intervals[n] = setInterval(() => updateProgress(n), 3000);
+  } else if (event.data === YT.PlayerState.PAUSED) {
+    clearInterval(intervals[n]);
+    track('video_pause', { video: n, pct: state.videos[n] });
+  } else if (event.data === YT.PlayerState.ENDED) {
+    clearInterval(intervals[n]);
+    state.videos[n] = 100;
+    updateProgressBar(n, 100);
+    track('video_complete', { video: n });
+  }
+}
+
+function updateProgress(n) {
+  const player = players[n];
+  if (!player || !player.getCurrentTime) return;
+  const current = player.getCurrentTime();
+  const total = player.getDuration();
+  if (!total) return;
+  const pct = Math.round((current / total) * 100);
+  state.videos[n] = pct;
+  updateProgressBar(n, pct);
+
+  // Track milestones
+  const milestones = [25, 50, 75, 90];
+  milestones.forEach(m => {
+    const key = `milestone_${n}_${m}`;
+    if (pct >= m && !sessionStorage.getItem(key)) {
+      sessionStorage.setItem(key, '1');
+      track('video_milestone', { video: n, pct: m });
+    }
+  });
+}
+
+function updateProgressBar(n, pct) {
+  const bar = document.getElementById('progbar-' + n);
+  const stat = document.getElementById('stat-' + n);
+  if (bar) bar.style.width = pct + '%';
+  if (stat) stat.textContent = pct + '% visto';
+}
+
+// ─── GENERADOR DE URLs CON QR (para las cartas) ───────────────────────────────
+// Uso: info.gestix.pro/?ref=CODIGO&e=NOMBRE_EMPRESA
+// Ejemplos:
+//   info.gestix.pro/?ref=dist001&e=Distribuidora%20García
+//   info.gestix.pro/?ref=lub002&e=Lubricantes%20Pérez
+// El campo "ref" identifica la carta enviada en tu base de datos.
+</script>
+
+</body>
+</html>
