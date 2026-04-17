@@ -2,7 +2,7 @@
 {% for item in productos %}
 {% set p = item.producto %}
 {% set precios = item.precios %}
-<div class="pos-producto-card" onclick="seleccionarProducto({{ p.id }}, '{{ p.codigo }}', '{{ p.nombre|replace("'", "\\'") }}', {{ precios[0].precio if precios else p.precio_venta }}, {{ precios[0].id if precios else 'null' }}, '{{ p.unidad.abreviado if p.unidad else "UND" }}', {{ p.afecto_igv|lower }})">
+<div class="pos-producto-card" onclick="seleccionarProducto({{ p.id }}, '{{ p.codigo }}', '{{ p.nombre|replace("'", "\\'") }}', {{ precios[0].precio_venta if precios else p.precio_venta }}, {{ precios[0].id if precios else 'null' }}, '{{ p.unidad.abreviado if p.unidad else "UND" }}', {{ p.afecto_igv|lower }})">
     {% if p.imagen_url %}
     <img src="{{ p.imagen_url }}" class="pos-prod-img">
     {% else %}
@@ -15,13 +15,13 @@
         <select class="pos-precio-sel" onclick="event.stopPropagation()"
                 onchange="this.parentElement.parentElement.onclick = () => seleccionarProducto({{ p.id }}, '{{ p.codigo }}', '{{ p.nombre|replace("'", "\\'") }}', parseFloat(this.value.split('|')[0]), parseInt(this.value.split('|')[1]), '{{ p.unidad.abreviado if p.unidad else "UND" }}', {{ p.afecto_igv|lower }})">
             {% for pr in precios %}
-            <option value="{{ pr.precio }}|{{ pr.id }}">
-                {{ pr.nombre }}: S/ {{ "%.2f"|format(pr.precio) }}
+            <option value="{{ pr.precio_venta }}|{{ pr.id }}">
+                {{ pr.nombre }}: S/ {{ "%.2f"|format(pr.precio_venta) }}
             </option>
             {% endfor %}
         </select>
         {% else %}
-        <span class="pos-prod-precio">S/ {{ "%.2f"|format(precios[0].precio if precios else p.precio_venta) }}</span>
+        <span class="pos-prod-precio">S/ {{ "%.2f"|format(precios[0].precio_venta if precios else p.precio_venta) }}</span>
         {% endif %}
     </div>
 </div>

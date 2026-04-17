@@ -2,7 +2,7 @@
 {% for item in productos %}
 {% set p = item.producto %}
 {% set precios = item.precios %}
-<div class="pos-producto-card" onclick="seleccionarProducto({{ p.id }}, '{{ p.codigo or '' }}', '{{ p.nombre|replace("'", "\\'") }}', {{ precios[0].precio if precios else p.precio_venta }}, {{ precios[0].id if precios else 'null' }}, '{{ p.unidad.abreviado if p.unidad else "UND" }}', {{ p.afecto_igv|lower }})">
+<div class="pos-producto-card" onclick="seleccionarProducto({{ p.id }}, '{{ p.codigo or '' }}', '{{ p.nombre|replace("'", "\\'") }}', {{ precios[0].precio_venta if precios else p.precio_venta }}, {{ precios[0].id if precios else 'null' }}, '{{ p.unidad.abreviado if p.unidad else "UND" }}', {{ p.afecto_igv|lower }})">
     {% if p.imagen_url %}
     <img src="{{ p.imagen_url }}" class="pos-prod-img">
     {% else %}
@@ -10,7 +10,7 @@
     {% endif %}
     <div class="pos-prod-info">
         <strong>{{ p.nombre }}</strong>
-        <span class="pos-prod-precio">S/ {{ "%.2f"|format(precios[0].precio if precios else p.precio_venta) }}</span>
+        <span class="pos-prod-precio">S/ {{ "%.2f"|format(precios[0].precio_venta if precios else p.precio_venta) }}</span>
     </div>
 </div>
 {% endfor %}
