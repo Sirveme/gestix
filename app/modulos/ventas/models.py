@@ -121,3 +121,90 @@ class PedidoItem(Base):
     nota = Column(String(200))
 
     pedido = relationship("Pedido", back_populates="items")
+
+
+class PedidoCola(Base):
+    """
+    Pedido en cola de caja. Un pedido del POS puede generar
+    una entrada en la cola cuando se "envía a caja".
+    """
+    __tablename__ = "ven_pedidos_cola"
+
+    id = Column(Integer, primary_key=True)
+    id_pedido = Column(Integer, ForeignKey("ven_pedidos.id"), nullable=False)
+
+    codigo_cliente = Column(String(20), index=True)
+    nombre_cliente = Column(String(100))
+
+    medio_pago_anticipado = Column(String(20), nullable=True)
+
+    estado = Column(String(20), default="en_cola", index=True)
+
+    id_validacion_pago = Column(Integer, nullable=True)
+    pagado_en = Column(DateTime, nullable=True)
+    monto_pagado = Column(Numeric(14, 2), nullable=True)
+
+    entregado_en = Column(DateTime, nullable=True)
+    id_usuario_entrego = Column(Integer, nullable=True)
+
+    id_punto_venta = Column(Integer, nullable=True)
+    id_usuario_creador = Column(Integer, nullable=True)
+    id_usuario_cajero = Column(Integer, nullable=True)
+
+    whatsapp_cliente = Column(String(15), nullable=True)
+    email_cliente = Column(String(100), nullable=True)
+    dni_ruc_cliente = Column(String(12), nullable=True)
+    link_comprobante = Column(String(200), nullable=True)
+
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+    pedido = relationship("Pedido", foreign_keys=[id_pedido])
+
+
+class PagoMixto(Base):
+    """Cada pago parcial de una venta con múltiples medios."""
+    __tablename__ = "ven_pagos_mixtos"
+
+    id = Column(Integer, primary_key=True)
+    id_pedido = Column(Integer, nullable=False, index=True)
+    id_cola = Column(Integer, nullable=True)
+    id_punto_venta = Column(Integer, nullable=True)
+    id_usuario = Column(Integer, nullable=True)
+
+    medio = Column(String(20), nullable=False)
+    monto = Column(Numeric(14, 2), nullable=False)
+    monto_total_venta = Column(Numeric(14, 2), nullable=False)
+
+    id_validacion = Column(Integer, nullable=True)
+    numero_operacion = Column(String(50), nullable=True)
+    banco = Column(String(50), nullable=True)
+    foto_url = Column(String(500), nullable=True)
+
+    estado = Column(String(20), default="confirmado")
+    orden = Column(Integer, default=1)
+
+    created_at = Column(DateTime, default=datetime.now)
+    confirmado_en = Column(DateTime, nullable=True)
+
+
+class ClienteDigital(Base):
+    """
+    Cliente que compró via catálogo digital (celular).
+    Historial de compras disponible por link permanente.
+    """
+    __tablename__ = "ven_clientes_digitales"
+
+    id = Column(Integer, primary_key=True)
+    token = Column(String(32), unique=True, index=True)
+
+    nombre = Column(String(100), nullable=True)
+    whatsapp = Column(String(15), nullable=True)
+    email = Column(String(100), nullable=True)
+    dni_ruc = Column(String(12), nullable=True)
+
+    total_compras = Column(Integer, default=0)
+    monto_total_historico = Column(Numeric(14, 2), default=0)
+
+    created_at = Column(DateTime, default=datetime.now)
+    ultima_compra = Column(DateTime, nullable=True)

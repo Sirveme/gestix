@@ -31,6 +31,7 @@ from app.modulos.config.models import (
 )
 
 router = APIRouter(prefix="/ventas", tags=["ventas"])
+public_router = APIRouter(tags=["ventas_publico"])
 templates = Jinja2Templates(directory="templates")
 
 
@@ -620,3 +621,499 @@ async def pagook_manual(
         id_usuario=id_usuario,
     )
     return JSONResponse(resultado)
+
+
+# ── Cola de caja (WebSocket + pantalla) ──────────────────────────────
+
+from fastapi import WebSocket, WebSocketDisconnect
+from app.modulos.ventas.cola_service import (
+    cola_manager, generar_codigo_cliente, get_cola_actual
+)
+from app.modulos.ventas.models import PedidoCola
+
+
+@router.get("/caja/cola", response_class=HTMLResponse)
+async def caja_cola(request: Request,
+                    db: AsyncSession = Depends(get_tenant_session)):
+    cola = await get_cola_actual(db)
+    return templates.TemplateResponse("ventas/caja_cola.html", ctx(request,
+        en_cola=cola["en_cola"],
+        pagados=cola["pagados"],
+    ))
+
+
+@router.websocket("/caja/ws")
+async def caja_websocket(websocket: WebSocket):
+    schema = websocket.cookies.get("tenant_schema", "public")
+    await cola_manager.conectar(websocket, schema)
+    try:
+        while True:
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        cola_manager.desconectar(websocket, schema)
+
+
+@router.post("/caja/enviar-a-cola")
+async def enviar_a_cola(request: Request,
+                        db: AsyncSession = Depends(get_tenant_session)):
+    data = await request.json()
+    id_pedido = int(data.get("id_pedido") or 0)
+    medio = data.get("medio_pago", "efectivo")
+    nombre = data.get("nombre_cliente", "")
+    id_usuario = int(getattr(request.state, "user_id", 0) or 0)
+    schema = getattr(request.state, "tenant_schema", "public")
+
+    r = await db.execute(select(Pedido).where(Pedido.id == id_pedido))
+    pedido = r.scalar_one_or_none()
+    if not pedido:
+        return JSONResponse({"ok": False, "error": "Pedido no encontrado"})
+
+    codigo = await generar_codigo_cliente(db)
+
+    cola = PedidoCola(
+        id_pedido=id_pedido,
+        codigo_cliente=codigo,
+        nombre_cliente=nombre or pedido.nombre_cliente,
+        medio_pago_anticipado=medio,
+        estado="en_cola",
+        id_usuario_creador=id_usuario,
+    )
+    db.add(cola)
+    await db.commit()
+    await db.refresh(cola)
+
+    await cola_manager.notificar_nuevo_pedido(schema, {
+        "id": cola.id,
+        "codigo_cliente": codigo,
+        "nombre_cliente": cola.nombre_cliente,
+        "medio_pago": medio,
+        "total": float(pedido.total),
+        "created_at": cola.created_at.strftime("%H:%M"),
+    })
+
+    return JSONResponse({"ok": True, "codigo": codigo, "id_cola": cola.id})
+
+
+@router.post("/caja/marcar-pagado/{id_cola}")
+async def marcar_pagado(request: Request, id_cola: int,
+                        db: AsyncSession = Depends(get_tenant_session)):
+    schema = getattr(request.state, "tenant_schema", "public")
+    data = await request.json()
+    monto = float(data.get("monto", 0))
+
+    r = await db.execute(select(PedidoCola).where(PedidoCola.id == id_cola))
+    cola = r.scalar_one_or_none()
+    if not cola:
+        return JSONResponse({"ok": False, "error": "No encontrado"})
+
+    cola.estado = "pagado"
+    cola.pagado_en = datetime.now()
+    cola.monto_pagado = Decimal(str(monto))
+    await db.commit()
+
+    await cola_manager.notificar_pago(schema, id_cola, monto, "efectivo")
+    return JSONResponse({"ok": True})
+
+
+@router.post("/caja/marcar-entregado/{id_cola}")
+async def marcar_entregado(request: Request, id_cola: int,
+                           db: AsyncSession = Depends(get_tenant_session)):
+    schema = getattr(request.state, "tenant_schema", "public")
+    id_usuario = int(getattr(request.state, "user_id", 0) or 0)
+
+    r = await db.execute(select(PedidoCola).where(PedidoCola.id == id_cola))
+    cola = r.scalar_one_or_none()
+    if not cola:
+        return JSONResponse({"ok": False})
+
+    cola.estado = "entregado"
+    cola.entregado_en = datetime.now()
+    cola.id_usuario_entrego = id_usuario
+    await db.commit()
+
+    await cola_manager.notificar_entregado(schema, id_cola)
+    return JSONResponse({"ok": True})
+
+
+# ── Vigilante ────────────────────────────────────────────────────────
+
+@router.get("/vigilante", response_class=HTMLResponse)
+async def vigilante_pantalla(request: Request,
+                              db: AsyncSession = Depends(get_tenant_session)):
+    return templates.TemplateResponse("ventas/vigilante.html", ctx(request))
+
+
+@router.get("/vigilante/buscar")
+async def vigilante_buscar(
+    request: Request,
+    q: str = Query(default=""),
+    db: AsyncSession = Depends(get_tenant_session),
+):
+    from sqlalchemy import or_
+
+    if not q:
+        return JSONResponse({"resultados": []})
+
+    r = await db.execute(
+        select(PedidoCola).where(
+            PedidoCola.estado == "pagado",
+            or_(
+                PedidoCola.codigo_cliente.ilike(f"%{q}%"),
+                PedidoCola.nombre_cliente.ilike(f"%{q}%"),
+            )
+        ).limit(5)
+    )
+    colas = r.scalars().all()
+
+    resultados = []
+    for c in colas:
+        r_ped = await db.execute(
+            select(Pedido).where(Pedido.id == c.id_pedido))
+        pedido = r_ped.scalar_one_or_none()
+
+        resultados.append({
+            "id_cola": c.id,
+            "codigo": c.codigo_cliente,
+            "nombre": c.nombre_cliente,
+            "total": float(pedido.total) if pedido else 0,
+            "pagado_en": c.pagado_en.strftime("%H:%M") if c.pagado_en else "",
+            "estado": c.estado,
+        })
+
+    return JSONResponse({"resultados": resultados})
+
+
+# ── Catálogo público del cliente (sin prefijo /ventas) ───────────────
+
+@public_router.get("/catalogo-publico/{ruc_negocio}", response_class=HTMLResponse)
+async def catalogo_publico(
+    request: Request,
+    ruc_negocio: str,
+    q: str = Query(default=""),
+    categoria: str = Query(default=""),
+):
+    from app.database import AsyncSessionLocal
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import (
+        create_async_engine, AsyncSession, async_sessionmaker
+    )
+    import os
+
+    async with AsyncSessionLocal() as db_public:
+        r = await db_public.execute(
+            text("SELECT schema_db, nombre_comercial FROM erp_empresas WHERE ruc=:ruc"),
+            {"ruc": ruc_negocio}
+        )
+        empresa = r.one_or_none()
+
+    if not empresa:
+        return HTMLResponse("Negocio no encontrado", status_code=404)
+
+    schema = empresa.schema_db
+    nombre_negocio = empresa.nombre_comercial
+
+    DATABASE_URL = os.getenv("DATABASE_URL", "").replace(
+        "postgresql://", "postgresql+asyncpg://").replace(
+        "postgres://", "postgresql+asyncpg://")
+
+    engine = create_async_engine(DATABASE_URL, echo=False)
+    Session = async_sessionmaker(engine, class_=AsyncSession)
+
+    productos = []
+    categorias = []
+
+    async with Session() as db:
+        await db.execute(text(f'SET search_path TO "{schema}", public'))
+
+        r_cats = await db.execute(text(
+            "SELECT id, nombre FROM cat_clasificador1 WHERE activo=true ORDER BY nombre"
+        ))
+        categorias = [{"id": r[0], "nombre": r[1]} for r in r_cats.fetchall()]
+
+        filtros = "WHERE p.activo=true AND p.inventariado=true"
+        params = {}
+
+        if q:
+            filtros += " AND (p.nombre ILIKE :q OR p.codigo ILIKE :q)"
+            params["q"] = f"%{q}%"
+
+        if categoria:
+            filtros += " AND p.id_clasificador1 = :cat"
+            params["cat"] = int(categoria)
+
+        r_prods = await db.execute(text(f"""
+            SELECT p.id, p.codigo, p.nombre, p.precio_venta,
+                   p.imagen_url, p.stock_minimo,
+                   COALESCE(s.cantidad, 0) as stock,
+                   cl.nombre as categoria
+            FROM cat_productos p
+            LEFT JOIN cat_stock_actual s ON s.id_producto = p.id AND s.id_almacen = 1
+            LEFT JOIN cat_clasificador1 cl ON cl.id = p.id_clasificador1
+            {filtros}
+            ORDER BY p.nombre
+            LIMIT 200
+        """), params)
+
+        for row in r_prods.fetchall():
+            stock = float(row[6] or 0)
+            stock_min = float(row[5] or 0)
+            agotandose = stock > 0 and stock_min > 0 and stock <= stock_min * 1.5
+
+            productos.append({
+                "id": row[0],
+                "codigo": row[1],
+                "nombre": row[2],
+                "precio": float(row[3] or 0),
+                "imagen_url": row[4] or "",
+                "stock": stock,
+                "agotandose": agotandose,
+                "disponible": stock > 0,
+                "categoria": row[7] or "",
+            })
+
+    await engine.dispose()
+
+    return templates.TemplateResponse("ventas/catalogo_publico.html", {
+        "request": request,
+        "productos": productos,
+        "categorias": categorias,
+        "nombre_negocio": nombre_negocio,
+        "ruc_negocio": ruc_negocio,
+        "q": q,
+        "categoria": categoria,
+    })
+
+
+@public_router.post("/catalogo-publico/{ruc_negocio}/pedido")
+async def catalogo_publico_pedido(request: Request, ruc_negocio: str):
+    import os, secrets
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import (
+        create_async_engine, AsyncSession, async_sessionmaker
+    )
+    from app.database import AsyncSessionLocal
+
+    data = await request.json()
+    items = data.get("items", [])
+    nombre_cliente = data.get("nombre", "Cliente")
+    medio_pago = data.get("medio_pago", "efectivo")
+    whatsapp = data.get("whatsapp", "")
+    email = data.get("email", "")
+    dni_ruc = data.get("dni_ruc", "")
+
+    if not items:
+        return JSONResponse({"ok": False, "error": "Sin productos"})
+
+    async with AsyncSessionLocal() as db_public:
+        r = await db_public.execute(
+            text("SELECT schema_db FROM erp_empresas WHERE ruc=:ruc"),
+            {"ruc": ruc_negocio}
+        )
+        empresa = r.one_or_none()
+
+    if not empresa:
+        return JSONResponse({"ok": False, "error": "Negocio no encontrado"})
+
+    schema = empresa.schema_db
+    DATABASE_URL = os.getenv("DATABASE_URL", "").replace(
+        "postgresql://", "postgresql+asyncpg://").replace(
+        "postgres://", "postgresql+asyncpg://")
+
+    engine = create_async_engine(DATABASE_URL, echo=False)
+    Session = async_sessionmaker(engine, class_=AsyncSession)
+
+    async with Session() as db:
+        await db.execute(text(f'SET search_path TO "{schema}", public'))
+
+        total = Decimal("0")
+        for item in items:
+            total += Decimal(str(item.get("precio", 0))) * \
+                     Decimal(str(item.get("cantidad", 1)))
+
+        codigo_pedido = f"WEB-{secrets.token_hex(4).upper()}"
+
+        r_pv = await db.execute(text(
+            "SELECT id FROM cfg_puntos_venta WHERE activo=true LIMIT 1"))
+        id_pv = r_pv.scalar() or 1
+
+        await db.execute(text("""
+            INSERT INTO ven_pedidos (
+                codigo, id_punto_venta, nombre_cliente, fecha, fechahora,
+                subtotal, igv, total, medio_pago, monto_pagado, vuelto,
+                estado, tipo_comprobante, anulado, id_usuario, created_at
+            ) VALUES (
+                :cod, :pv, :nom, :fecha, NOW(),
+                :sub, :igv, :total, :medio, 0, 0,
+                'borrador', '03', false, 0, NOW()
+            )
+        """), {
+            "cod": codigo_pedido, "pv": id_pv,
+            "nom": nombre_cliente,
+            "fecha": date.today(),
+            "sub": round(total / Decimal("1.18"), 2),
+            "igv": round(total - total / Decimal("1.18"), 2),
+            "total": total, "medio": medio_pago,
+        })
+
+        r_id = await db.execute(text(
+            "SELECT id FROM ven_pedidos WHERE codigo=:cod"),
+            {"cod": codigo_pedido})
+        id_pedido = r_id.scalar_one()
+
+        for item in items:
+            await db.execute(text("""
+                INSERT INTO ven_pedido_items (
+                    id_pedido, id_producto, nombre_producto,
+                    unidad, equivalente, cantidad, precio_unitario,
+                    descuento, subtotal, igv, icbper, total,
+                    afecto_igv, es_combo
+                ) VALUES (
+                    :pid, :prodid, :nom, 'UND', 1,
+                    :cant, :precio, 0,
+                    :sub, :igv, 0, :total, true, false
+                )
+            """), {
+                "pid": id_pedido,
+                "prodid": item["id"],
+                "nom": item["nombre"],
+                "cant": item["cantidad"],
+                "precio": item["precio"],
+                "sub": round(
+                    Decimal(str(item["precio"])) *
+                    Decimal(str(item["cantidad"])) / Decimal("1.18"), 2),
+                "igv": round(
+                    Decimal(str(item["precio"])) *
+                    Decimal(str(item["cantidad"])) *
+                    Decimal("18") / Decimal("118"), 2),
+                "total": Decimal(str(item["precio"])) *
+                         Decimal(str(item["cantidad"])),
+            })
+
+        n_hoy_r = await db.execute(text(
+            "SELECT COUNT(*) FROM ven_pedidos_cola WHERE created_at::date = CURRENT_DATE"))
+        n_hoy = (n_hoy_r.scalar() or 0) + 1
+        codigo_cola = f"{date.today().strftime('%d%m')}-{n_hoy:03d}"
+
+        token_cliente = secrets.token_hex(16)
+
+        await db.execute(text("""
+            INSERT INTO ven_pedidos_cola (
+                id_pedido, codigo_cliente, nombre_cliente,
+                medio_pago_anticipado, estado,
+                whatsapp_cliente, email_cliente, dni_ruc_cliente,
+                link_comprobante, created_at, updated_at
+            ) VALUES (
+                :pid, :cod, :nom, :medio, 'en_cola',
+                :wa, :email, :dni,
+                :link, NOW(), NOW()
+            )
+        """), {
+            "pid": id_pedido, "cod": codigo_cola,
+            "nom": nombre_cliente, "medio": medio_pago,
+            "wa": whatsapp, "email": email, "dni": dni_ruc,
+            "link": f"/mis-compras/{token_cliente}",
+        })
+
+        await db.execute(text("""
+            INSERT INTO ven_clientes_digitales (
+                token, nombre, whatsapp, email, dni_ruc,
+                total_compras, monto_total_historico,
+                created_at, ultima_compra
+            ) VALUES (
+                :tok, :nom, :wa, :email, :dni,
+                1, :total, NOW(), NOW()
+            ) ON CONFLICT (token) DO UPDATE SET
+                total_compras = ven_clientes_digitales.total_compras + 1,
+                monto_total_historico =
+                    ven_clientes_digitales.monto_total_historico + :total,
+                ultima_compra = NOW()
+        """), {
+            "tok": token_cliente, "nom": nombre_cliente,
+            "wa": whatsapp, "email": email, "dni": dni_ruc,
+            "total": float(total),
+        })
+
+        await db.commit()
+
+    await engine.dispose()
+
+    return JSONResponse({
+        "ok": True,
+        "codigo": codigo_cola,
+        "id_pedido": id_pedido,
+        "total": float(total),
+        "link_comprobante": f"/mis-compras/{token_cliente}",
+        "token": token_cliente,
+    })
+
+
+@public_router.get("/mis-compras/{token}", response_class=HTMLResponse)
+async def historial_cliente(request: Request, token: str):
+    return templates.TemplateResponse("ventas/mis_compras.html", {
+        "request": request,
+        "token": token,
+    })
+
+
+@public_router.get("/mis-compras-data/{token}")
+async def historial_data(token: str):
+    from sqlalchemy import text
+    from sqlalchemy.ext.asyncio import (
+        create_async_engine, AsyncSession, async_sessionmaker
+    )
+    from app.database import AsyncSessionLocal
+    import os
+
+    DATABASE_URL = os.getenv("DATABASE_URL", "").replace(
+        "postgresql://", "postgresql+asyncpg://").replace(
+        "postgres://", "postgresql+asyncpg://")
+    engine = create_async_engine(DATABASE_URL, echo=False)
+    Session = async_sessionmaker(engine, class_=AsyncSession)
+
+    compras = []
+
+    async with AsyncSessionLocal() as db_public:
+        r = await db_public.execute(
+            text("SELECT schema_db, nombre_comercial FROM erp_empresas WHERE activo=true"))
+        empresas = r.fetchall()
+
+    async with Session() as db:
+        for empresa in empresas:
+            schema = empresa[0]
+            negocio = empresa[1]
+            try:
+                await db.execute(text(f'SET search_path TO "{schema}", public'))
+                r = await db.execute(text("""
+                    SELECT c.codigo_cliente, p.fecha, p.total, c.estado,
+                           p.id as id_pedido
+                    FROM ven_pedidos_cola c
+                    JOIN ven_pedidos p ON p.id = c.id_pedido
+                    WHERE c.link_comprobante LIKE :tok
+                    ORDER BY p.fecha DESC
+                    LIMIT 20
+                """), {"tok": f"%{token}%"})
+                rows = r.fetchall()
+
+                for row in rows:
+                    r_items = await db.execute(text("""
+                        SELECT nombre_producto, cantidad, precio_unitario
+                        FROM ven_pedido_items WHERE id_pedido=:pid
+                    """), {"pid": row[4]})
+                    items = [
+                        {"nombre": i[0], "cantidad": float(i[1]),
+                         "precio": float(i[2])}
+                        for i in r_items.fetchall()
+                    ]
+                    compras.append({
+                        "codigo": row[0],
+                        "fecha": row[1].strftime("%d/%m/%Y") if row[1] else "",
+                        "total": float(row[2] or 0),
+                        "estado": row[3],
+                        "negocio": negocio,
+                        "items": items,
+                    })
+            except Exception:
+                pass
+
+    await engine.dispose()
+    return JSONResponse({"compras": compras})
