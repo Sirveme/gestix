@@ -506,23 +506,25 @@ def _parse_fecha_hora(date_str: str) -> tuple[date, str | None]:
 
 async def _actualizar_dominio(db, dominio: str, banco: str,
                                confianza: str, dominios_aprendidos: dict):
-    from sqlalchemy import select
+    from sqlalchemy import select, update
     from app.modulos.contabilidad.models import DominioBancario
 
     result = await db.execute(
-        select(DominioBancario).where(DominioBancario.dominio == dominio))
-    db_dominio = result.scalar_one_or_none()
+        select(DominioBancario.id).where(DominioBancario.dominio == dominio))
+    existe = result.scalar_one_or_none()
 
     hoy = date.today()
 
-    if db_dominio:
-        db_dominio.ultima_vez = datetime.now()
-        db_dominio.total_correos = (db_dominio.total_correos or 0) + 1
-        if db_dominio.fecha_conteo_hoy == hoy:
-            db_dominio.total_hoy = (db_dominio.total_hoy or 0) + 1
-        else:
-            db_dominio.total_hoy = 1
-            db_dominio.fecha_conteo_hoy = hoy
+    if existe:
+        stmt = update(DominioBancario).where(
+            DominioBancario.dominio == dominio
+        ).values({
+            "ultima_vez": datetime.now(),
+            "total_correos": DominioBancario.total_correos + 1,
+            "total_hoy": DominioBancario.total_hoy + 1,
+            "updated_at": datetime.now(),
+        })
+        await db.execute(stmt)
     else:
         nuevo = DominioBancario(
             dominio=dominio,
