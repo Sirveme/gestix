@@ -1,11 +1,8 @@
-"""
-Cruce automatico de movimientos bancarios con ventas de Gestix.
-Detecta pagos Yape/Plin/Transferencia y los vincula con pedidos.
-"""
+"""Cruce de movimientos bancarios con ventas de Gestix."""
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from decimal import Decimal
-from datetime import datetime, timedelta
+from datetime import timedelta, datetime
 from app.modulos.contabilidad.models import MovimientoBancario
 from app.modulos.ventas.models import Pedido
 
@@ -14,18 +11,14 @@ async def cruzar_movimiento(
     db: AsyncSession,
     movimiento: MovimientoBancario,
     tolerancia_dias: int = 2,
-    tolerancia_monto: Decimal = Decimal("0.01"),
+    tolerancia_monto: Decimal = Decimal("0.50"),
 ) -> dict:
-    """
-    Intenta cruzar un movimiento bancario con una venta.
-    Criterios:
-    1. Mismo monto (tolerancia S/0.01)
-    2. Fecha cercana (+/-2 dias)
-    3. Medio de pago coincide (yape, plin, transferencia)
-    4. Estado del pedido: confirmado o borrador
-    """
+    """Cruza un movimiento bancario con una venta."""
     if movimiento.tipo != "abono":
         return {"cruzado": False, "motivo": "No es abono"}
+
+    if movimiento.confianza == "baja":
+        return {"cruzado": False, "motivo": "Confianza baja -- revisar manualmente"}
 
     fecha_desde = movimiento.fecha - timedelta(days=tolerancia_dias)
     fecha_hasta = movimiento.fecha + timedelta(days=tolerancia_dias)
@@ -33,12 +26,13 @@ async def cruzar_movimiento(
     medios_map = {
         "yape": ["yape"],
         "plin": ["plin"],
-        "transferencia": ["transferencia", "deposito"],
-        "bcp": ["transferencia", "deposito"],
-        "bbva": ["transferencia", "deposito"],
-        "interbank": ["transferencia", "deposito"],
+        "interbank": ["transferencia", "deposito", "plin"],
+        "bcp": ["transferencia", "deposito", "yape"],
+        "bbva": ["transferencia", "deposito", "plin"],
+        "scotiabank": ["transferencia", "deposito"],
+        "banbif": ["transferencia", "deposito"],
     }
-    medios = medios_map.get(movimiento.tipo_operacion or movimiento.banco, [])
+    medios = medios_map.get(movimiento.banco, ["transferencia"])
 
     query = select(Pedido).where(
         Pedido.fecha >= fecha_desde,
@@ -47,10 +41,8 @@ async def cruzar_movimiento(
         Pedido.total <= movimiento.monto + tolerancia_monto,
         Pedido.anulado == False,
         Pedido.estado.in_(["confirmado", "facturado", "borrador"]),
+        Pedido.medio_pago.in_(medios),
     )
-
-    if medios:
-        query = query.where(Pedido.medio_pago.in_(medios))
 
     result = await db.execute(query)
     pedidos = result.scalars().all()
@@ -72,19 +64,14 @@ async def cruzar_movimiento(
     elif len(pedidos) > 1:
         movimiento.estado_cruce = "sin_match"
         movimiento.nota_cruce = f"Multiples pedidos posibles: {len(pedidos)}"
-        return {
-            "cruzado": False,
-            "motivo": f"Multiples matches ({len(pedidos)})",
-            "candidatos": [p.codigo for p in pedidos[:5]],
-        }
+        return {"cruzado": False, "motivo": f"Multiples matches ({len(pedidos)})"}
     else:
         movimiento.estado_cruce = "sin_match"
-        movimiento.nota_cruce = "Sin pedido que coincida"
+        movimiento.nota_cruce = "Sin pedido que coincida en monto/fecha/medio"
         return {"cruzado": False, "motivo": "Sin match"}
 
 
 async def cruzar_pendientes(db: AsyncSession) -> dict:
-    """Cruza todos los movimientos pendientes."""
     result = await db.execute(
         select(MovimientoBancario).where(
             MovimientoBancario.estado_cruce == "pendiente",
@@ -92,17 +79,12 @@ async def cruzar_pendientes(db: AsyncSession) -> dict:
         )
     )
     movimientos = result.scalars().all()
-
-    cruzados = 0
-    sin_match = 0
-
+    cruzados = sin_match = 0
     for mov in movimientos:
-        resultado = await cruzar_movimiento(db, mov)
-        if resultado["cruzado"]:
+        r = await cruzar_movimiento(db, mov)
+        if r["cruzado"]:
             cruzados += 1
         else:
             sin_match += 1
-
     await db.commit()
-    return {"cruzados": cruzados, "sin_match": sin_match,
-            "total": len(movimientos)}
+    return {"cruzados": cruzados, "sin_match": sin_match, "total": len(movimientos)}

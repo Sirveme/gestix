@@ -7,7 +7,7 @@ from sqlalchemy import (
     DateTime, Date, JSON, ForeignKey, CHAR, Index
 )
 from sqlalchemy.orm import relationship
-from datetime import datetime
+from datetime import datetime, date
 from app.database import Base
 
 
@@ -372,12 +372,9 @@ class CuentaBancaria(Base):
     nombre_cuenta = Column(String(200))
     moneda = Column(String(3), default="PEN")
     tipo = Column(String(20), default="corriente")
-
     email_notif = Column(String(100))
-
     saldo_actual = Column(Numeric(16, 2), default=0)
     saldo_fecha = Column(Date, nullable=True)
-
     activo = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.now)
 
@@ -386,11 +383,67 @@ class CuentaBancaria(Base):
                                cascade="all, delete-orphan")
 
 
+class DominioBancario(Base):
+    """
+    Registro de dominios DKIM verificados por banco.
+    Se aprende automaticamente + se precarga manualmente.
+    """
+    __tablename__ = "cont_dominios_bancarios"
+
+    id = Column(Integer, primary_key=True)
+    dominio = Column(String(200), unique=True, nullable=False, index=True)
+    banco = Column(String(50), nullable=False)
+
+    estado = Column(String(20), default="nuevo")
+    fuente = Column(String(30), default="automatico")
+
+    primera_vez = Column(DateTime, default=datetime.now)
+    ultima_vez = Column(DateTime, default=datetime.now)
+    total_correos = Column(Integer, default=0)
+    total_hoy = Column(Integer, default=0)
+    fecha_conteo_hoy = Column(Date, default=date.today)
+
+    nota = Column(Text, nullable=True)
+    revisado_por = Column(Integer, nullable=True)
+    revisado_en = Column(DateTime, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.now)
+    updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
+
+
+class CorreoSospechoso(Base):
+    """
+    Correos que no pasaron DKIM o tienen dominio desconocido.
+    Se guardan para revision manual.
+    """
+    __tablename__ = "cont_correos_sospechosos"
+
+    id = Column(Integer, primary_key=True)
+
+    from_addr = Column(String(300))
+    asunto = Column(String(300))
+    fecha_correo = Column(DateTime)
+    dominio_dkim = Column(String(200), nullable=True)
+    dkim_resultado = Column(String(20))
+    spf_resultado = Column(String(20), nullable=True)
+    auth_results_raw = Column(Text, nullable=True)
+
+    razon = Column(String(50))
+    descripcion_razon = Column(Text)
+    cuerpo_preview = Column(Text, nullable=True)
+
+    revisado = Column(Boolean, default=False)
+    revision_accion = Column(String(20), nullable=True)
+    revisado_por = Column(Integer, nullable=True)
+    revisado_en = Column(DateTime, nullable=True)
+    nota_revision = Column(Text, nullable=True)
+
+    email_mensaje_id = Column(String(200), unique=True, nullable=True)
+    importado_en = Column(DateTime, default=datetime.now)
+
+
 class MovimientoBancario(Base):
-    """
-    Movimiento bancario extraido de notificacion por correo.
-    Se cruza con ventas y compras de Gestix.
-    """
+    """Movimiento bancario extraido de notificacion por correo."""
     __tablename__ = "cont_movimientos_bancarios"
 
     id = Column(Integer, primary_key=True)
@@ -414,10 +467,13 @@ class MovimientoBancario(Base):
     nombre_contraparte = Column(String(200))
     celular_contraparte = Column(String(15))
 
+    confianza = Column(String(20), default="alta")
+
     origen = Column(String(20), default="email")
     email_mensaje_id = Column(String(200))
     email_asunto = Column(String(300))
     email_fecha = Column(DateTime)
+    dominio_dkim = Column(String(200))
 
     estado_cruce = Column(String(20), default="pendiente")
 
@@ -425,7 +481,6 @@ class MovimientoBancario(Base):
     id_compra = Column(Integer, nullable=True)
     diferencia_monto = Column(Numeric(14, 2), nullable=True)
     nota_cruce = Column(Text, nullable=True)
-
     cruzado_en = Column(DateTime, nullable=True)
     id_usuario_cruzo = Column(Integer, nullable=True)
 

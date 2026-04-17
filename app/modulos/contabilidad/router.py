@@ -9,8 +9,8 @@ from app.tenant import get_tenant_session
 from app.modulos.contabilidad.models import (
     CuentaContable, AsientoContable, PartidaContable,
     ConfigContable, LibroElectronico, RegistroSIRE,
-    MovimientoBancario, DeclaracionTributaria,
-    DiagnosticoEmpresa, HallazgoDiagnostico,
+    MovimientoBancario, DominioBancario, CorreoSospechoso,
+    DeclaracionTributaria, DiagnosticoEmpresa, HallazgoDiagnostico,
 )
 from app.modulos.contabilidad.service import (
     calcular_declaracion_mensual, ejecutar_scan,
@@ -269,68 +269,63 @@ async def cont_sire(
 # -- Banco / Conciliacion --------------------------------
 
 @router.get("/banco", response_class=HTMLResponse)
-async def cont_banco(
-    request: Request,
-    db: AsyncSession = Depends(get_tenant_session),
-):
+async def cont_banco(request: Request,
+                     db: AsyncSession = Depends(get_tenant_session)):
     result = await db.execute(
         select(MovimientoBancario).order_by(
-            MovimientoBancario.fecha.desc()
-        ).limit(100)
-    )
+            MovimientoBancario.fecha.desc()).limit(100))
     movimientos = result.scalars().all()
 
-    pendientes = sum(1 for m in movimientos if m.estado_cruce == "pendiente")
-    cruzados = sum(1 for m in movimientos if m.estado_cruce == "cruzado")
-    sin_match = sum(1 for m in movimientos if m.estado_cruce == "sin_match")
+    result2 = await db.execute(
+        select(CorreoSospechoso).where(
+            CorreoSospechoso.revisado == False
+        ).order_by(CorreoSospechoso.importado_en.desc()).limit(20))
+    sospechosos = result2.scalars().all()
+
+    result3 = await db.execute(
+        select(DominioBancario).order_by(
+            DominioBancario.ultima_vez.desc().nullslast()).limit(50))
+    dominios = result3.scalars().all()
 
     return templates.TemplateResponse("contabilidad/banco.html", ctx(request,
         movimientos=movimientos,
-        pendientes=pendientes,
-        cruzados=cruzados,
-        sin_match=sin_match,
+        sospechosos=sospechosos,
+        dominios=dominios,
+        pendientes=sum(1 for m in movimientos if m.estado_cruce == "pendiente"),
+        cruzados=sum(1 for m in movimientos if m.estado_cruce == "cruzado"),
+        sin_match=sum(1 for m in movimientos if m.estado_cruce == "sin_match"),
+        sospechosos_count=len(sospechosos),
     ))
 
 
 @router.post("/banco/importar")
-async def cont_banco_importar(
-    request: Request,
-    db: AsyncSession = Depends(get_tenant_session),
-):
-    """Lee correos del IMAP e importa movimientos nuevos."""
+async def cont_banco_importar(request: Request,
+                               db: AsyncSession = Depends(get_tenant_session)):
     from app.modulos.contabilidad.imap_service import importar_movimientos_bancarios
     from app.modulos.contabilidad.cruce_service import cruzar_pendientes
     try:
         data = await request.json()
         dias = int(data.get("dias", 7))
-        resultado = await importar_movimientos_bancarios(db, dias_atras=dias)
-        if resultado["nuevos"] > 0:
+        stats = await importar_movimientos_bancarios(db, dias_atras=dias)
+        if stats["nuevos"] > 0:
             cruce = await cruzar_pendientes(db)
-            resultado["cruzados_auto"] = cruce["cruzados"]
-        return JSONResponse({"ok": True, **resultado})
-    except ConnectionError as e:
-        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+            stats["cruzados_auto"] = cruce["cruzados"]
+        return JSONResponse({"ok": True, **stats})
     except Exception as e:
         return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
 
 
 @router.post("/banco/cruzar")
-async def cont_banco_cruzar(
-    request: Request,
-    db: AsyncSession = Depends(get_tenant_session),
-):
-    """Cruza manualmente todos los movimientos pendientes."""
+async def cont_banco_cruzar(request: Request,
+                             db: AsyncSession = Depends(get_tenant_session)):
     from app.modulos.contabilidad.cruce_service import cruzar_pendientes
     resultado = await cruzar_pendientes(db)
     return JSONResponse({"ok": True, **resultado})
 
 
 @router.post("/banco/movimiento/{id}/ignorar")
-async def cont_banco_ignorar(
-    request: Request, id: int,
-    db: AsyncSession = Depends(get_tenant_session),
-):
-    """Marca un movimiento como ignorado."""
+async def cont_banco_ignorar(request: Request, id: int,
+                              db: AsyncSession = Depends(get_tenant_session)):
     result = await db.execute(
         select(MovimientoBancario).where(MovimientoBancario.id == id))
     mov = result.scalar_one_or_none()
@@ -338,3 +333,57 @@ async def cont_banco_ignorar(
         mov.estado_cruce = "ignorado"
         await db.commit()
     return JSONResponse({"ok": True})
+
+
+@router.post("/banco/sospechoso/{id}/revisar")
+async def cont_banco_revisar_sospechoso(
+    request: Request, id: int,
+    db: AsyncSession = Depends(get_tenant_session),
+):
+    """Marcar correo sospechoso como revisado y tomar accion."""
+    data = await request.json()
+    accion = data.get("accion", "ignorar")
+    nota = data.get("nota", "")
+
+    result = await db.execute(
+        select(CorreoSospechoso).where(CorreoSospechoso.id == id))
+    sosp = result.scalar_one_or_none()
+
+    if sosp:
+        sosp.revisado = True
+        sosp.revision_accion = accion
+        sosp.nota_revision = nota
+        sosp.revisado_en = datetime.now()
+        sosp.revisado_por = int(getattr(request.state, "user_id", 0) or 0)
+
+        if accion == "agregar_dominio" and sosp.dominio_dkim:
+            banco = data.get("banco", "desconocido")
+            nuevo = DominioBancario(
+                dominio=sosp.dominio_dkim,
+                banco=banco,
+                estado="confirmado",
+                fuente="revision_manual",
+                nota=f"Confirmado por revision manual. {nota}",
+                revisado_por=sosp.revisado_por,
+                revisado_en=datetime.now(),
+            )
+            db.add(nuevo)
+
+        await db.commit()
+
+    return JSONResponse({"ok": True})
+
+
+@router.get("/banco/dominios", response_class=HTMLResponse)
+async def cont_banco_dominios(request: Request,
+                               db: AsyncSession = Depends(get_tenant_session)):
+    """Vista de dominios bancarios conocidos y estadisticas."""
+    result = await db.execute(
+        select(DominioBancario).order_by(
+            DominioBancario.estado,
+            DominioBancario.ultima_vez.desc().nullslast()
+        )
+    )
+    dominios = result.scalars().all()
+    return templates.TemplateResponse("contabilidad/banco_dominios.html",
+        ctx(request, dominios=dominios))
