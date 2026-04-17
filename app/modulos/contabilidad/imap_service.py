@@ -418,6 +418,7 @@ async def importar_movimientos_bancarios(
 
                 # CASO 6: Correo bancario legitimo
                 body = get_email_body(msg)
+                print(f"[IMAP BODY PREVIEW] {body[:500]}")
                 datos = extraer_datos_movimiento(subject, body, banco)
 
                 if not datos.get("monto"):
