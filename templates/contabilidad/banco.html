@@ -61,11 +61,38 @@
                     <table class="data-table">
                         <thead>
                             <tr><th>Fecha</th><th>Banco</th><th>Tipo</th><th>Monto</th>
+                                <th>N° Operacion</th><th>Destinatario</th>
                                 <th>Remitente</th><th>Confianza</th><th>Estado</th><th>Venta</th><th></th></tr>
                         </thead>
                         <tbody>
                         {% for m in movimientos %}
-                        <tr id="row-{{ m.id }}">
+                        <tr id="row-{{ m.id }}"
+                            data-id="{{ m.id }}"
+                            data-banco="{{ m.banco or '' }}"
+                            data-fecha="{{ m.fecha.strftime('%d/%m/%Y') if m.fecha else '' }}"
+                            data-hora="{{ m.hora or '' }}"
+                            data-tipo="{{ m.tipo or '' }}"
+                            data-monto="{{ m.monto if m.monto is not none else '' }}"
+                            data-moneda="{{ m.moneda or 'PEN' }}"
+                            data-descripcion="{{ m.descripcion or '' }}"
+                            data-referencia="{{ m.referencia or '' }}"
+                            data-numero-operacion="{{ m.numero_operacion or '' }}"
+                            data-tipo-operacion="{{ m.tipo_operacion or '' }}"
+                            data-nombre-contraparte="{{ m.nombre_contraparte or '' }}"
+                            data-celular-contraparte="{{ m.celular_contraparte or '' }}"
+                            data-confianza="{{ m.confianza or '' }}"
+                            data-origen="{{ m.origen or '' }}"
+                            data-email-mensaje-id="{{ m.email_mensaje_id or '' }}"
+                            data-email-asunto="{{ m.email_asunto or '' }}"
+                            data-email-fecha="{{ m.email_fecha.strftime('%d/%m/%Y %H:%M') if m.email_fecha else '' }}"
+                            data-dominio-dkim="{{ m.dominio_dkim or '' }}"
+                            data-estado-cruce="{{ m.estado_cruce or '' }}"
+                            data-id-venta="{{ m.id_venta or '' }}"
+                            data-id-compra="{{ m.id_compra or '' }}"
+                            data-diferencia-monto="{{ m.diferencia_monto if m.diferencia_monto is not none else '' }}"
+                            data-nota-cruce="{{ m.nota_cruce or '' }}"
+                            data-saldo-posterior="{{ m.saldo_posterior if m.saldo_posterior is not none else '' }}"
+                            data-importado-en="{{ m.importado_en.strftime('%d/%m/%Y %H:%M') if m.importado_en else '' }}">
                             <td>{{ m.fecha.strftime('%d/%m/%Y') }}{% if m.hora %}<br><span class="sub">{{ m.hora[:5] }}</span>{% endif %}</td>
                             <td>
                                 {% if m.banco == 'yape' %}Yape
@@ -78,7 +105,9 @@
                             </td>
                             <td>{% if m.tipo == 'abono' %}<span style="color:var(--green)">Abono</span>{% else %}<span style="color:var(--red)">Cargo</span>{% endif %}</td>
                             <td><strong>S/ {{ "%.2f"|format(m.monto) }}</strong></td>
-                            <td>{% if m.nombre_contraparte %}<strong>{{ m.nombre_contraparte }}</strong>{% if m.celular_contraparte %}<br><span class="sub">{{ m.celular_contraparte }}</span>{% endif %}{% else %}&mdash;{% endif %}</td>
+                            <td>{% if m.numero_operacion %}<code style="font-size:0.8rem">{{ m.numero_operacion }}</code>{% else %}&mdash;{% endif %}</td>
+                            <td>{% if m.tipo == 'cargo' and m.nombre_contraparte %}{{ m.nombre_contraparte }}{% else %}&mdash;{% endif %}</td>
+                            <td>{% if m.tipo == 'abono' and m.nombre_contraparte %}<strong>{{ m.nombre_contraparte }}</strong>{% if m.celular_contraparte %}<br><span class="sub">{{ m.celular_contraparte }}</span>{% endif %}{% else %}&mdash;{% endif %}</td>
                             <td>
                                 {% if m.confianza == 'alta' %}<span class="badge badge-ok">Alta</span>
                                 {% elif m.confianza == 'media' %}<span class="badge badge-warn">Media</span>
@@ -91,12 +120,27 @@
                                 {% elif m.estado_cruce == 'ignorado' %}<span class="badge" style="opacity:0.4">Ignorado</span>{% endif %}
                             </td>
                             <td>{% if m.id_venta %}<a href="/ventas/pedidos/{{ m.id_venta }}" class="btn-icon">&rarr;</a>{% else %}&mdash;{% endif %}</td>
-                            <td>{% if m.estado_cruce in ('pendiente','sin_match') %}<button class="btn-icon" onclick="ignorar({{ m.id }})" title="Ignorar">&times;</button>{% endif %}</td>
+                            <td style="white-space:nowrap">
+                                <button class="btn-icon" onclick="verDetalle({{ m.id }})" title="Ver detalle">&#128269;</button>
+                                {% if m.estado_cruce in ('pendiente','sin_match') %}<button class="btn-icon" onclick="ignorar({{ m.id }})" title="Ignorar">&times;</button>{% endif %}
+                            </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="9" class="table-empty">Sin movimientos. Haz click en "Leer correos".</td></tr>
+                        <tr><td colspan="11" class="table-empty">Sin movimientos. Haz click en "Leer correos".</td></tr>
                         {% endfor %}
                         </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div id="modal-detalle" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:9999;align-items:flex-start;justify-content:center;padding:4rem 1rem;overflow-y:auto" onclick="if(event.target===this)cerrarDetalle()">
+                <div style="background:var(--bg2,#1a1a22);border:1px solid rgba(255,255,255,0.1);border-radius:10px;max-width:680px;width:100%;padding:1.5rem;box-shadow:0 10px 40px rgba(0,0,0,0.5)">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+                        <h3 style="margin:0">Detalle del movimiento</h3>
+                        <button class="btn-icon" onclick="cerrarDetalle()" title="Cerrar" style="font-size:1.2rem">&times;</button>
+                    </div>
+                    <table class="data-table" style="width:100%">
+                        <tbody id="modal-detalle-body"></tbody>
                     </table>
                 </div>
             </div>
@@ -168,6 +212,56 @@ async function cruzarPendientes() {
         setTimeout(() => location.reload(), 1500);
     }
 }
+
+const CAMPOS_DETALLE = [
+    ['fecha', 'Fecha'],
+    ['hora', 'Hora'],
+    ['banco', 'Banco'],
+    ['tipo', 'Tipo'],
+    ['monto', 'Monto'],
+    ['moneda', 'Moneda'],
+    ['tipo-operacion', 'Tipo operacion'],
+    ['numero-operacion', 'N° operacion'],
+    ['referencia', 'Referencia'],
+    ['nombre-contraparte', 'Contraparte'],
+    ['celular-contraparte', 'Celular'],
+    ['descripcion', 'Descripcion'],
+    ['confianza', 'Confianza'],
+    ['estado-cruce', 'Estado cruce'],
+    ['id-venta', 'ID venta'],
+    ['id-compra', 'ID compra'],
+    ['diferencia-monto', 'Diferencia monto'],
+    ['nota-cruce', 'Nota cruce'],
+    ['saldo-posterior', 'Saldo posterior'],
+    ['origen', 'Origen'],
+    ['email-asunto', 'Asunto correo'],
+    ['email-fecha', 'Fecha correo'],
+    ['email-mensaje-id', 'Message-ID'],
+    ['dominio-dkim', 'Dominio DKIM'],
+    ['importado-en', 'Importado'],
+];
+
+function verDetalle(id) {
+    const row = document.getElementById(`row-${id}`);
+    if (!row) return;
+    const tbody = document.getElementById('modal-detalle-body');
+    const filas = CAMPOS_DETALLE.map(([attr, label]) => {
+        const val = row.dataset[attr.replace(/-([a-z])/g, (_, c) => c.toUpperCase())];
+        const display = val && val.length > 0 ? val : '—';
+        return `<tr><th style="text-align:left;padding:0.35rem 0.75rem;width:40%;color:var(--text2)">${label}</th>` +
+               `<td style="padding:0.35rem 0.75rem;word-break:break-word">${display.replace(/</g,'&lt;')}</td></tr>`;
+    }).join('');
+    tbody.innerHTML = filas;
+    document.getElementById('modal-detalle').style.display = 'flex';
+}
+
+function cerrarDetalle() {
+    document.getElementById('modal-detalle').style.display = 'none';
+}
+
+document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') cerrarDetalle();
+});
 
 async function ignorar(id) {
     await fetch(`/contabilidad/banco/movimiento/${id}/ignorar`, {method: 'POST'});
