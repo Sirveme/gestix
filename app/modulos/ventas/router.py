@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 from decimal import Decimal
 from datetime import datetime, date
 from app.tenant import get_tenant_session
@@ -212,12 +213,9 @@ async def pos_buscar_productos(
     if not q and not clas1:
         return HTMLResponse("")
 
-    query = select(Producto, ProductoPrecio).join(
-        ProductoPrecio,
-        (ProductoPrecio.id_producto == Producto.id) &
-        (ProductoPrecio.activo == True) &
-        (ProductoPrecio.es_precio_venta == True),
-        isouter=True
+    query = select(Producto).options(
+        selectinload(Producto.unidad),
+        selectinload(Producto.precios),
     ).where(Producto.activo == True)
 
     if q:
@@ -235,18 +233,16 @@ async def pos_buscar_productos(
         query = query.where(Producto.id_clas1 == clas1)
 
     result = await db.execute(query.limit(50))
-    rows = result.all()
-    print(f"[POS BUSCAR] encontrados={len(rows)}")
+    productos_list = result.scalars().all()
+    print(f"[POS BUSCAR] encontrados={len(productos_list)}")
 
-    productos_data = {}
-    for prod, precio in rows:
-        if prod.id not in productos_data:
-            productos_data[prod.id] = {"producto": prod, "precios": []}
-        if precio:
-            productos_data[prod.id]["precios"].append(precio)
+    productos = []
+    for prod in productos_list:
+        precios_venta = [p for p in prod.precios if p.activo and p.es_precio_venta]
+        productos.append({"producto": prod, "precios": precios_venta})
 
     return templates.TemplateResponse("ventas/partials/productos_pos.html",
-        ctx(request, productos=list(productos_data.values())))
+        ctx(request, productos=productos))
 
 
 @router.get("/pos/categoria/{id_clas1}", response_class=HTMLResponse)
