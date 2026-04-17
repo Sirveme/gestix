@@ -18,6 +18,58 @@
                 <line x1="8" y1="23" x2="16" y2="23"/>
             </svg>
         </button>
+        {% if request.state.empresas_usuario and request.state.empresas_usuario|length > 1 %}
+        <div class="empresa-selector" style="position:relative">
+            <button type="button" onclick="toggleEmpresas()"
+                    style="background:rgba(255,255,255,0.08);
+                           border:1px solid var(--border);
+                           border-radius:6px;padding:0.4rem 0.85rem;
+                           color:var(--text);cursor:pointer;
+                           font-size:0.8rem;display:flex;
+                           align-items:center;gap:0.4rem">
+                🏢 {{ request.state.empresa_nombre }}
+                <span style="opacity:0.5;font-size:0.7rem">▼</span>
+            </button>
+            <div id="empresas-dropdown"
+                 style="display:none;position:absolute;right:0;top:110%;
+                        background:var(--bg2);border:1px solid var(--border);
+                        border-radius:8px;min-width:220px;z-index:200;
+                        box-shadow:0 8px 24px rgba(0,0,0,0.4);overflow:hidden">
+                {% for emp in request.state.empresas_usuario %}
+                <form method="POST" action="/seleccionar-empresa/confirmar">
+                    <input type="hidden" name="empresa_id" value="{{ emp.id }}">
+                    <button type="submit"
+                            style="width:100%;text-align:left;
+                                   padding:0.75rem 1rem;background:none;
+                                   border:none;color:var(--text);
+                                   cursor:pointer;font-size:0.85rem;
+                                   border-bottom:1px solid var(--border)">
+                        {% if emp.id == request.state.empresa_id_actual %}
+                        <span style="color:var(--cyan)">✓ </span>
+                        {% endif %}
+                        {{ emp.nombre_comercial or emp.razon_social }}
+                        <br>
+                        <span style="font-size:0.7rem;color:var(--text3)">
+                            {{ emp.ruc }}
+                        </span>
+                    </button>
+                </form>
+                {% endfor %}
+            </div>
+        </div>
+        <script>
+        function toggleEmpresas() {
+            const d = document.getElementById('empresas-dropdown');
+            d.style.display = d.style.display === 'none' ? 'block' : 'none';
+        }
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.empresa-selector')) {
+                const d = document.getElementById('empresas-dropdown');
+                if (d) d.style.display = 'none';
+            }
+        });
+        </script>
+        {% endif %}
         <div class="topbar-user">
             <span>{{ request.state.nombre if request.state.nombre else '' }}</span>
             <div class="user-avatar">{{ (request.state.nombre[0] | upper) if request.state.nombre else 'U' }}</div>
