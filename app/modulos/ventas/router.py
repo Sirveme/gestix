@@ -97,7 +97,7 @@ async def caja_abrir_post(request: Request,
     id_pv = int(form.get("id_punto_venta", 0))
 
     caja_existente = await obtener_caja_abierta(
-        db, id_pv, getattr(request.state, "user_id", 0))
+        db, id_pv, int(getattr(request.state, "user_id", 0) or 0))
     if caja_existente:
         return templates.TemplateResponse("ventas/caja_abrir.html", ctx(request,
             pvs=[], error="Ya hay una caja abierta para este punto de venta"))
@@ -166,7 +166,7 @@ async def caja_cerrar_post(request: Request, id: int,
 async def pos_pantalla(request: Request, id_pv: int,
                         db: AsyncSession = Depends(get_tenant_session)):
     caja = await obtener_caja_abierta(
-        db, id_pv, getattr(request.state, "user_id", 0))
+        db, id_pv, int(getattr(request.state, "user_id", 0) or 0))
 
     r_pv = await db.execute(
         select(ConfigPuntoVenta).where(ConfigPuntoVenta.id == id_pv))
@@ -283,14 +283,14 @@ async def pedido_nuevo(request: Request,
     id_pv = data.get("id_punto_venta", 1)
 
     caja = await obtener_caja_abierta(
-        db, id_pv, getattr(request.state, "user_id", 0))
+        db, id_pv, int(getattr(request.state, "user_id", 0) or 0))
 
     codigo = await generar_codigo_pedido(db)
     pedido = Pedido(
         codigo=codigo,
         id_punto_venta=id_pv,
         id_caja_apertura=caja.id if caja else None,
-        id_usuario=getattr(request.state, "user_id", 0),
+        id_usuario=int(getattr(request.state, "user_id", 0) or 0),
         estado="borrador",
         fecha=date.today(),
     )
@@ -428,7 +428,7 @@ async def pedido_confirmar(
     id_almacen = pv.id_almacen if pv else 1
 
     await confirmar_pedido(db, pedido, id_almacen,
-                            getattr(request.state, "user_id", 0))
+                            int(getattr(request.state, "user_id", 0) or 0))
 
     if data.get("emitir_cpe") and pedido.tipo_comprobante in ["01", "03"]:
         r_fact = await db.execute(select(ConfigFacturacion).limit(1))
