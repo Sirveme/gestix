@@ -1,0 +1,324 @@
+{% extends "base.html" %}
+{% block title %}Validar Pago — pagoOK{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content" style="max-width:600px;margin:0 auto">
+
+            <div class="page-header" style="text-align:center;padding:2rem 0 1rem">
+                <div style="font-size:2.5rem;margin-bottom:0.5rem">📱</div>
+                <h1 style="font-size:1.5rem">Validar pago Yape / Plin</h1>
+                {% if monto_esperado and monto_esperado != "0" %}
+                <div style="margin-top:0.5rem">
+                    <span class="badge badge-warn" style="font-size:1rem;padding:0.5rem 1.25rem">
+                        Monto esperado: S/ {{ monto_esperado }}
+                    </span>
+                </div>
+                {% endif %}
+            </div>
+
+            <div id="estado-esperando">
+                <div class="form-section" style="margin-bottom:1rem;text-align:center">
+                    <h3 class="section-title">📷 Fotografiar comprobante del cliente</h3>
+                    <p style="font-size:0.875rem;color:var(--text2);margin-bottom:1.25rem">
+                        Apunta la cámara al celular del cliente y toma la foto de su Yape/Plin
+                    </p>
+
+                    <div id="camara-container" style="display:none;margin-bottom:1rem">
+                        <video id="video-camara" autoplay playsinline
+                               style="width:100%;max-width:400px;border-radius:12px;
+                                      border:2px solid var(--cyan)">
+                        </video>
+                        <br>
+                        <button class="btn-primary" onclick="tomarFoto()"
+                                style="margin-top:0.75rem;font-size:1rem;padding:0.85rem 2rem">
+                            📸 Tomar foto
+                        </button>
+                        <button class="btn-secondary" onclick="cerrarCamara()"
+                                style="margin-top:0.75rem">
+                            Cancelar
+                        </button>
+                    </div>
+
+                    <canvas id="canvas-foto" style="display:none"></canvas>
+
+                    <div id="btn-abrir-camara">
+                        <button class="btn-primary"
+                                onclick="abrirCamara()"
+                                style="font-size:1.1rem;padding:1rem 2.5rem;
+                                       width:100%;max-width:350px">
+                            📷 Abrir cámara
+                        </button>
+                    </div>
+
+                    <div style="margin-top:1rem">
+                        <label style="font-size:0.8rem;color:var(--text3);cursor:pointer">
+                            o seleccionar imagen de la galería →
+                            <input type="file" id="input-galeria" accept="image/*"
+                                   style="display:none" onchange="procesarImagenGaleria(this)">
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-section" style="text-align:center">
+                    <h3 class="section-title">⌨️ Ingresar N° de operación manualmente</h3>
+                    <div class="field" style="max-width:350px;margin:0 auto">
+                        <input type="text" id="input-nro-op" class="field-input"
+                               placeholder="Ej: 62469835"
+                               style="text-align:center;font-size:1.25rem;
+                                      letter-spacing:0.1em">
+                    </div>
+                    <button class="btn-secondary" onclick="validarManual()"
+                            style="margin-top:0.75rem;width:100%;max-width:350px">
+                        Validar N° de operación
+                    </button>
+                </div>
+            </div>
+
+            <div id="estado-procesando" style="display:none;text-align:center;padding:3rem 0">
+                <div style="font-size:3rem;margin-bottom:1rem">⏳</div>
+                <h2 style="font-weight:300">Verificando pago...</h2>
+                <p style="color:var(--text2);margin-top:0.5rem">
+                    Consultando notificaciones bancarias
+                </p>
+            </div>
+
+            <div id="estado-confirmado" style="display:none;text-align:center;padding:2rem 0">
+                <div style="font-size:4rem;margin-bottom:1rem">✅</div>
+                <h2 style="color:var(--green);font-size:2rem;font-weight:700">
+                    PAGO CONFIRMADO
+                </h2>
+                <div id="detalle-confirmado" style="margin:1.5rem auto;max-width:350px;
+                     background:rgba(0,255,136,0.05);border:1px solid rgba(0,255,136,0.2);
+                     border-radius:12px;padding:1.25rem">
+                </div>
+                <button class="btn-primary" onclick="cerrarValidacion()"
+                        style="margin-top:1rem;font-size:1rem;padding:0.85rem 2.5rem">
+                    ✓ Continuar con la venta
+                </button>
+            </div>
+
+            <div id="estado-no-encontrado" style="display:none;text-align:center;padding:2rem 0">
+                <div style="font-size:3rem;margin-bottom:1rem">❓</div>
+                <h2 style="color:var(--orange);font-size:1.5rem">
+                    Pago no encontrado
+                </h2>
+                <p id="msg-no-encontrado" style="color:var(--text2);margin:1rem 0"></p>
+                <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;
+                            margin-top:1.5rem">
+                    <button class="btn-secondary" onclick="reintentar()">
+                        🔄 Intentar de nuevo
+                    </button>
+                    <button class="btn-secondary" onclick="aprobarManualmente()"
+                            style="border-color:rgba(255,107,53,0.4);color:var(--orange)">
+                        ⚠ Aprobar manualmente
+                    </button>
+                </div>
+            </div>
+
+            <div id="estado-multiple" style="display:none;text-align:center;padding:2rem 0">
+                <div style="font-size:3rem;margin-bottom:1rem">🤔</div>
+                <h2 style="font-size:1.5rem">Varios pagos posibles</h2>
+                <p style="color:var(--text2);margin-bottom:1.5rem">
+                    Hay más de un pago con ese monto reciente. ¿Cuál es?
+                </p>
+                <div id="lista-candidatos"></div>
+            </div>
+
+            <div id="foto-preview" style="display:none;text-align:center;margin-top:1rem">
+                <img id="img-preview" style="max-width:300px;border-radius:8px;
+                                              border:1px solid var(--border)">
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<script>
+const ID_PUNTO_VENTA = {{ id_punto_venta }};
+const PEDIDO_ID = {{ pedido_id or 'null' }};
+const MONTO_ESPERADO = '{{ monto_esperado }}';
+
+let stream = null;
+
+async function abrirCamara() {
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'environment', width: 1280, height: 720 }
+        });
+        const video = document.getElementById('video-camara');
+        video.srcObject = stream;
+        document.getElementById('camara-container').style.display = 'block';
+        document.getElementById('btn-abrir-camara').style.display = 'none';
+    } catch (err) {
+        alert('No se pudo acceder a la cámara. Verifica los permisos.');
+        console.error(err);
+    }
+}
+
+function cerrarCamara() {
+    if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+        stream = null;
+    }
+    document.getElementById('camara-container').style.display = 'none';
+    document.getElementById('btn-abrir-camara').style.display = 'block';
+}
+
+function tomarFoto() {
+    const video = document.getElementById('video-camara');
+    const canvas = document.getElementById('canvas-foto');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+
+    canvas.toBlob(blob => {
+        cerrarCamara();
+        mostrarPreview(URL.createObjectURL(blob));
+        enviarFoto(blob);
+    }, 'image/jpeg', 0.85);
+}
+
+function procesarImagenGaleria(input) {
+    const file = input.files[0];
+    if (!file) return;
+    mostrarPreview(URL.createObjectURL(file));
+    enviarFoto(file);
+}
+
+function mostrarPreview(url) {
+    document.getElementById('img-preview').src = url;
+    document.getElementById('foto-preview').style.display = 'block';
+}
+
+async function enviarFoto(blob) {
+    mostrarEstado('procesando');
+
+    const form = new FormData();
+    form.append('foto', blob, 'comprobante.jpg');
+    form.append('pedido_id', PEDIDO_ID || '');
+    form.append('id_punto_venta', ID_PUNTO_VENTA);
+    form.append('monto_esperado', MONTO_ESPERADO);
+
+    try {
+        const resp = await fetch('/ventas/pos/validar-pago/foto', {
+            method: 'POST', body: form
+        });
+        const data = await resp.json();
+        procesarResultado(data);
+    } catch (err) {
+        mostrarEstado('esperando');
+        alert('Error de conexión. Verifica tu internet.');
+    }
+}
+
+async function validarManual() {
+    const nroOp = document.getElementById('input-nro-op').value.trim();
+    if (!nroOp) {
+        alert('Ingresa el número de operación');
+        return;
+    }
+    mostrarEstado('procesando');
+    const resp = await fetch('/ventas/pos/validar-pago/manual', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            numero_operacion: nroOp,
+            monto: MONTO_ESPERADO ? parseFloat(MONTO_ESPERADO) : null,
+            pedido_id: PEDIDO_ID,
+            id_punto_venta: ID_PUNTO_VENTA,
+        })
+    });
+    const data = await resp.json();
+    procesarResultado(data);
+}
+
+function procesarResultado(data) {
+    if (data.ok && data.estado === 'confirmado') {
+        mostrarEstado('confirmado');
+        document.getElementById('detalle-confirmado').innerHTML = `
+            <div style="font-size:1.75rem;font-weight:800;color:var(--green);
+                        margin-bottom:0.75rem">S/ ${data.monto.toFixed(2)}</div>
+            <div style="font-size:0.875rem;color:var(--text2);line-height:1.8">
+                ${data.nombre_pagador ? `<strong>${data.nombre_pagador}</strong><br>` : ''}
+                ${data.banco ? data.banco.toUpperCase() : ''}
+                ${data.numero_operacion ? `<br>Op. ${data.numero_operacion}` : ''}
+                <br><span style="color:var(--text3)">
+                    Verificado en ${data.tiempo_seg || 0}s
+                </span>
+            </div>
+        `;
+        if (window.opener) {
+            window.opener.postMessage({
+                tipo: 'pago_confirmado',
+                monto: data.monto,
+                validacion_id: data.validacion_id,
+            }, '*');
+        }
+    } else if (data.estado === 'multiple_match') {
+        mostrarEstado('multiple');
+        const lista = document.getElementById('lista-candidatos');
+        lista.innerHTML = (data.candidatos || []).map(c => `
+            <div onclick="seleccionarCandidato(${c.id})"
+                 style="background:var(--bg2);border:1px solid var(--border);
+                        border-radius:8px;padding:1rem;margin-bottom:0.5rem;
+                        cursor:pointer;transition:border-color 0.2s"
+                 onmouseover="this.style.borderColor='var(--cyan)'"
+                 onmouseout="this.style.borderColor='var(--border)'">
+                <strong>S/ ${c.monto.toFixed(2)}</strong> —
+                ${c.banco.toUpperCase()} —
+                ${c.fecha} ${c.hora ? c.hora.substring(0,5) : ''}
+            </div>
+        `).join('');
+    } else {
+        mostrarEstado('no-encontrado');
+        document.getElementById('msg-no-encontrado').textContent =
+            data.mensaje || 'No encontramos la notificación de este pago.';
+    }
+}
+
+function seleccionarCandidato(movimientoId) {
+    fetch('/ventas/pos/validar-pago/manual', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            movimiento_id: movimientoId,
+            pedido_id: PEDIDO_ID,
+            id_punto_venta: ID_PUNTO_VENTA,
+        })
+    }).then(r => r.json()).then(procesarResultado);
+}
+
+function aprobarManualmente() {
+    if (confirm('¿Aprobar este pago manualmente sin verificación automática?')) {
+        mostrarEstado('confirmado');
+        document.getElementById('detalle-confirmado').innerHTML = `
+            <div style="color:var(--orange);font-size:0.875rem">
+                ⚠ Aprobado manualmente por el cajero<br>
+                Sin verificación automática
+            </div>
+        `;
+    }
+}
+
+function reintentar() {
+    document.getElementById('foto-preview').style.display = 'none';
+    document.getElementById('input-nro-op').value = '';
+    mostrarEstado('esperando');
+}
+
+function cerrarValidacion() {
+    if (window.opener) window.close();
+    else history.back();
+}
+
+function mostrarEstado(estado) {
+    ['esperando','procesando','confirmado','no-encontrado','multiple'].forEach(s => {
+        document.getElementById(`estado-${s}`).style.display = 'none';
+    });
+    document.getElementById(`estado-${estado}`).style.display = 'block';
+}
+</script>
+{% endblock %}

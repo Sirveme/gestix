@@ -135,6 +135,12 @@
                 </button>
                 {% endfor %}
             </div>
+            <div id="btn-pagook-container" style="display:none;margin-top:0.75rem">
+                <button class="btn-primary" onclick="abrirPagoOK()"
+                        style="width:100%;background:linear-gradient(135deg,#7c3aed,#00d4ff)">
+                    📱 Validar con pagoOK →
+                </button>
+            </div>
         </div>
 
         <div class="pos-pago-input">
@@ -364,7 +370,34 @@ function setMedioPago(tipo, btn) {
     document.querySelectorAll('.medio-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
     POS.medio_pago = tipo;
+    const btnPagoOK = document.getElementById('btn-pagook-container');
+    if (btnPagoOK) {
+        btnPagoOK.style.display =
+            ['yape', 'plin', 'transferencia'].includes(tipo) ? 'block' : 'none';
+    }
 }
+
+function abrirPagoOK() {
+    const total = POS.totales.total || 0;
+    const url = `/ventas/pos/${POS.id_pv}/validar-pago`
+        + `?pedido_id=${POS.pedido_id || ''}`
+        + `&monto=${total}`;
+    const w = 500, h = 700;
+    const left = (screen.width - w) / 2;
+    const top = (screen.height - h) / 2;
+    window.open(url, 'pagoOK',
+        `width=${w},height=${h},left=${left},top=${top},resizable=no`);
+}
+
+window.addEventListener('message', (e) => {
+    if (e.data && e.data.tipo === 'pago_confirmado') {
+        const btn = document.getElementById('btn-cobrar');
+        if (btn) {
+            btn.textContent = `✓ Pago validado S/ ${Number(e.data.monto).toFixed(2)} — Cobrar`;
+            btn.style.background = 'linear-gradient(135deg,#00d4ff,#00ff88)';
+        }
+    }
+});
 
 let reconocimiento = null;
 function iniciarVoz() {
