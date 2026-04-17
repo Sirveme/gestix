@@ -183,6 +183,22 @@ PALABRAS_CARGO = [
     "pagaste", "enviaste", "has enviado",
 ]
 
+# Palabras que nunca deben aparecer en un nombre de persona/empresa
+# (si la captura las contiene, es texto de descripcion, no una contraparte)
+PALABRAS_NO_NOMBRE = [
+    "pago", "plin", "yape", "transferencia", "abono", "deposito",
+    "cargo", "interbank", "bcp", "bbva", "scotiabank", "banbif",
+    "constancia", "notificacion", "alerta", "saldo", "operacion",
+]
+
+
+def _es_nombre_valido(texto: str) -> bool:
+    """Descarta capturas que son texto de descripcion (no nombres reales)."""
+    if not texto or len(texto) < 3:
+        return False
+    t = texto.lower()
+    return not any(p in t for p in PALABRAS_NO_NOMBRE)
+
 
 def extraer_datos_movimiento(subject: str, body: str, banco: str) -> dict:
     """Extrae monto, tipo, referencia, nombre del cuerpo del correo."""
@@ -238,15 +254,15 @@ def extraer_datos_movimiento(subject: str, body: str, banco: str) -> dict:
             dest = match.group(1).strip()
             # Limpiar saltos y espacios extra
             dest = re.sub(r'\s+', ' ', dest)
-            if len(dest) > 2:
+            if len(dest) > 2 and _es_nombre_valido(dest):
                 datos["destinatario"] = dest
-            break
+                break
 
     for pattern in EXTRACTORES["nombre"]:
         match = re.search(pattern, texto, re.IGNORECASE)
         if match:
-            nombre = match.group(1).strip()
-            if 3 < len(nombre) < 100:
+            nombre = re.sub(r'\s+', ' ', match.group(1).strip())
+            if 3 < len(nombre) < 100 and _es_nombre_valido(nombre):
                 datos["nombre_contraparte"] = nombre
                 break
 
