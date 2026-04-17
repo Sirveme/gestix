@@ -33,13 +33,14 @@
                 <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                     <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
                 </svg>
-                <input type="text" id="pos-search"
+                <input type="text" id="pos-search" name="q"
                        placeholder="Buscar producto, codigo o escanear..."
                        autocomplete="off"
                        hx-get="/ventas/pos/productos/buscar"
                        hx-trigger="keyup changed delay:250ms"
                        hx-target="#pos-productos"
-                       hx-swap="innerHTML">
+                       hx-swap="innerHTML"
+                       hx-include="this">
             </div>
             <button class="pos-voz-btn" id="btn-voz" title="Buscar por voz"
                     onclick="iniciarVoz()">MIC</button>
