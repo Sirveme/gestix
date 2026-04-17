@@ -242,20 +242,43 @@ def extraer_datos_movimiento(subject: str, body: str, banco: str) -> dict:
             datos["referencia"] = match.group(1).strip()[:50]
             break
 
-    for pattern in EXTRACTORES["numero_operacion"]:
-        match = re.search(pattern, texto, re.IGNORECASE)
-        if match:
-            datos["numero_operacion"] = match.group(1).strip()[:50]
+    patrones_op = [
+        r'[Cc][oó]digo de operaci[oó]n[:\s]*(\d+)',
+        r'[Cc]odigo de operacion[:\s]*(\d+)',
+        r'[Nn][uú]mero de operaci[oó]n[:\s]*(\d+)',
+        r'[Oo]peraci[oó]n[:\s#]*(\d{6,})',
+        r'N[°º]\s*operaci[oó]n[:\s]*(\d+)',
+    ]
+    for pat in patrones_op:
+        m = re.search(pat, texto, re.IGNORECASE)
+        if m:
+            datos["numero_operacion"] = m.group(1).strip()
+            print(f"[DEBUG OPERACION FOUND] {datos['numero_operacion']}")
             break
+    else:
+        print(f"[DEBUG OPERACION NOT FOUND] primeros 200 chars: {texto[:200]}")
 
     for pattern in EXTRACTORES["destinatario"]:
         match = re.search(pattern, texto, re.IGNORECASE)
         if match:
             dest = match.group(1).strip()
-            # Limpiar saltos y espacios extra
             dest = re.sub(r'\s+', ' ', dest)
+            # Si el regex tambien absorbio "Destino: <app>" al final, separarlo
+            destino_app = None
+            m_dest = re.search(r'\bdestino\b[:\s]+(.+)$', dest, re.IGNORECASE)
+            if m_dest:
+                destino_app = m_dest.group(1).strip()
+                dest = dest[:m_dest.start()].strip()
             if len(dest) > 2 and _es_nombre_valido(dest):
                 datos["destinatario"] = dest
+                if destino_app:
+                    destino_lower = destino_app.lower().strip()
+                    if "yape" in destino_lower:
+                        datos["tipo_operacion"] = "yape"
+                    elif "plin" in destino_lower:
+                        datos["tipo_operacion"] = "plin"
+                    else:
+                        datos["tipo_operacion"] = "transferencia"
                 break
 
     for pattern in EXTRACTORES["nombre"]:
@@ -366,15 +389,10 @@ async def importar_movimientos_bancarios(
                 _, msg_data = mail.fetch(num, "(RFC822)")
                 msg = email.message_from_bytes(msg_data[0][1])
 
-                subject = _decode_header_str(msg.get("Subject", ""))
-                from_addr = msg.get("From", "")
+                # PRIMERO: obtener Message-ID
                 message_id = msg.get("Message-ID", "").strip()
-                auth_results = msg.get("Authentication-Results", "")
-                date_str = msg.get("Date", "")
 
-                print(f"[IMAP] Procesando: from={from_addr[:60]}, subject={subject[:60]}")
-
-                # Verificar duplicado por Message-ID ANTES de procesar
+                # SEGUNDO: verificar duplicado ANTES de todo lo demás
                 if message_id:
                     r_dup = await db.execute(
                         select(MovimientoBancario).where(
@@ -382,9 +400,10 @@ async def importar_movimientos_bancarios(
                         ).limit(1)
                     )
                     if r_dup.scalar_one_or_none():
+                        print(f"[IMAP] Duplicado ignorado: {message_id[:50]}")
                         stats["duplicados"] += 1
-                        print(f"[IMAP] Duplicado (movimiento): {subject[:50]}")
                         continue
+
                     r_dup2 = await db.execute(
                         select(CorreoSospechoso).where(
                             CorreoSospechoso.email_mensaje_id == message_id
@@ -392,8 +411,15 @@ async def importar_movimientos_bancarios(
                     )
                     if r_dup2.scalar_one_or_none():
                         stats["duplicados"] += 1
-                        print(f"[IMAP] Duplicado (sospechoso): {subject[:50]}")
                         continue
+
+                # RECIEN AQUI: decodificar subject, from, etc.
+                subject = _decode_header_str(msg.get("Subject", ""))
+                from_addr = msg.get("From", "")
+                auth_results = msg.get("Authentication-Results", "")
+                date_str = msg.get("Date", "")
+
+                print(f"[IMAP] Procesando: from={from_addr[:60]}, subject={subject[:60]}")
 
                 # Parsear DKIM
                 auth = parsear_authentication_results(auth_results)
