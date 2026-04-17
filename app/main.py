@@ -14,7 +14,7 @@ from app.auth.middleware import auth_middleware
 from app.auth.router import router as auth_router
 from app.modulos.config.router import router as config_router
 from app.modulos.catalogo.router import router as catalogo_router
-from app.modulos.ventas.router import router as ventas_router
+from app.modulos.ventas.router import router as ventas_router, public_router as ventas_public_router
 from app.modulos.auth.router import router as auth_op_router
 from app.modulos.compras.router import router as compras_router
 from app.modulos.inventario.router import router as inventario_router
@@ -61,6 +61,7 @@ app.include_router(auth_router)
 app.include_router(config_router)
 app.include_router(catalogo_router)
 app.include_router(ventas_router)
+app.include_router(ventas_public_router)
 app.include_router(auth_op_router)
 app.include_router(compras_router)
 app.include_router(inventario_router)
