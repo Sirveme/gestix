@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{ nombre_negocio }} — Catálogo</title>
+<meta name="theme-color" content="#0f1117">
+<style>
+:root {
+  --bg:#0f1117;--bg2:#161b27;--bg3:#1e2535;
+  --azul:#63b3ed;--verde:#68d391;--orange:#f6ad55;--red:#fc8181;
+  --text:#e2e8f0;--text2:#a0aec0;--text3:#4a5568;
+  --border:rgba(99,179,237,0.12);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,sans-serif;background:var(--bg);color:var(--text);
+     min-height:100vh;padding-bottom:120px}
+
+.header{background:var(--bg2);border-bottom:1px solid var(--border);
+        padding:1rem;position:sticky;top:0;z-index:50}
+.header h1{font-size:1.1rem;font-weight:700}
+.header-sub{font-size:0.75rem;color:var(--text2)}
+
+.search-bar{padding:0.75rem 1rem;
+            background:var(--bg2);border-bottom:1px solid var(--border)}
+.search-input{width:100%;padding:0.65rem 1rem;
+              background:var(--bg3);border:1px solid var(--border);
+              border-radius:8px;color:var(--text);font-size:0.9rem}
+
+.cats{display:flex;gap:0.5rem;padding:0.75rem 1rem;
+      overflow-x:auto;background:var(--bg2);
+      border-bottom:1px solid var(--border)}
+.cat-btn{padding:0.35rem 0.85rem;border-radius:100px;
+         background:var(--bg3);border:1px solid var(--border);
+         color:var(--text2);font-size:0.75rem;cursor:pointer;
+         white-space:nowrap;transition:all 0.15s}
+.cat-btn.active{background:rgba(99,179,237,0.15);
+                border-color:var(--azul);color:var(--azul)}
+
+.productos-grid{display:grid;
+                grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+                gap:0.75rem;padding:0.75rem}
+.prod-card{background:var(--bg2);border:1px solid var(--border);
+           border-radius:10px;overflow:hidden;cursor:pointer;
+           transition:border-color 0.2s}
+.prod-card:hover{border-color:var(--azul)}
+.prod-card.agotandose{border-color:rgba(246,173,85,0.4)}
+.prod-img{width:100%;height:100px;object-fit:cover;background:var(--bg3)}
+.prod-img-placeholder{width:100%;height:100px;background:var(--bg3);
+                       display:flex;align-items:center;justify-content:center;
+                       font-size:2rem}
+.prod-info{padding:0.6rem}
+.prod-nombre{font-size:0.8rem;font-weight:600;line-height:1.3;
+             margin-bottom:0.25rem}
+.prod-precio{font-size:1rem;font-weight:800;color:var(--azul)}
+.prod-badge{font-size:0.65rem;padding:0.15rem 0.4rem;border-radius:4px;
+            margin-top:0.3rem;display:inline-block}
+.badge-agotandose{background:rgba(246,173,85,0.15);color:var(--orange)}
+.badge-agotado{background:rgba(252,129,129,0.15);color:var(--red)}
+
+.carrito-fab{position:fixed;bottom:80px;right:1rem;z-index:100;
+             background:var(--azul);color:#0f1117;border:none;
+             border-radius:50px;padding:0.75rem 1.25rem;
+             font-weight:700;font-size:0.875rem;cursor:pointer;
+             display:none;align-items:center;gap:0.5rem;
+             box-shadow:0 4px 20px rgba(99,179,237,0.4)}
+.carrito-fab.show{display:flex}
+.carrito-badge{background:#0f1117;color:var(--azul);
+               border-radius:50%;width:20px;height:20px;
+               display:flex;align-items:center;justify-content:center;
+               font-size:0.7rem;font-weight:800}
+
+.drawer{position:fixed;bottom:0;left:0;right:0;z-index:200;
+        background:var(--bg2);border-top:1px solid var(--border);
+        border-radius:16px 16px 0 0;padding:1.25rem;
+        transform:translateY(100%);transition:transform 0.3s;
+        max-height:85vh;overflow-y:auto}
+.drawer.open{transform:translateY(0)}
+.drawer-handle{width:40px;height:4px;background:var(--border);
+               border-radius:2px;margin:0 auto 1rem}
+
+.checkout-section{margin-top:1rem;padding-top:1rem;
+                  border-top:1px solid var(--border)}
+.field-checkout{width:100%;padding:0.65rem 1rem;
+                background:var(--bg3);border:1px solid var(--border);
+                border-radius:8px;color:var(--text);font-size:0.9rem;
+                margin-bottom:0.5rem}
+.medio-btns{display:grid;grid-template-columns:repeat(3,1fr);gap:0.5rem;
+            margin-bottom:1rem}
+.medio-btn{padding:0.5rem;border-radius:8px;background:var(--bg3);
+           border:1px solid var(--border);color:var(--text2);
+           cursor:pointer;font-size:0.75rem;text-align:center;
+           transition:all 0.15s}
+.medio-btn.selected{background:rgba(99,179,237,0.1);
+                    border-color:var(--azul);color:var(--azul)}
+.btn-pagar{width:100%;padding:1rem;background:var(--azul);
+           color:#0f1117;border:none;border-radius:10px;
+           font-weight:800;font-size:1rem;cursor:pointer;
+           margin-top:0.5rem}
+.btn-pagar:disabled{opacity:0.4}
+</style>
+</head>
+<body>
+
+<div class="header">
+    <h1>🏪 {{ nombre_negocio }}</h1>
+    <div class="header-sub">Toca un producto para agregar al carrito</div>
+</div>
+
+<div class="search-bar">
+    <input class="search-input" type="search" placeholder="🔍 Buscar producto..."
+           id="input-busqueda" value="{{ q }}"
+           oninput="buscar(this.value)">
+</div>
+
+<div class="cats">
+    <button class="cat-btn {% if not categoria %}active{% endif %}"
+            onclick="filtrarCat('')">Todos</button>
+    {% for cat in categorias %}
+    <button class="cat-btn {% if categoria == cat.id|string %}active{% endif %}"
+            onclick="filtrarCat('{{ cat.id }}')">{{ cat.nombre }}</button>
+    {% endfor %}
+</div>
+
+<div class="productos-grid" id="grid-productos">
+    {% for p in productos %}
+    <div class="prod-card {% if p.agotandose %}agotandose{% endif %}
+                          {% if not p.disponible %}agotado{% endif %}"
+         onclick="agregarAlCarrito({{ p.id }}, {{ p.nombre|tojson }},
+                                   {{ p.precio }}, {{ p.stock }})">
+        {% if p.imagen_url %}
+        <img class="prod-img" src="{{ p.imagen_url }}" alt="{{ p.nombre }}"
+             onerror="this.style.display='none';
+                      this.nextElementSibling.style.display='flex'">
+        <div class="prod-img-placeholder" style="display:none">📦</div>
+        {% else %}
+        <div class="prod-img-placeholder">📦</div>
+        {% endif %}
+        <div class="prod-info">
+            <div class="prod-nombre">{{ p.nombre }}</div>
+            <div class="prod-precio">S/ {{ "%.2f"|format(p.precio) }}</div>
+            {% if p.agotandose %}
+            <span class="prod-badge badge-agotandose">
+                ⚠ AGOTÁNDOSE
+                {% if p.stock < 5 %} ({{ p.stock|int }} unid.){% endif %}
+            </span>
+            {% elif not p.disponible %}
+            <span class="prod-badge badge-agotado">AGOTADO</span>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<button class="carrito-fab" id="fab-carrito" onclick="abrirCarrito()">
+    🛒 Ver carrito
+    <span class="carrito-badge" id="fab-count">0</span>
+</button>
+
+<div class="drawer" id="drawer-carrito">
+    <div class="drawer-handle" onclick="cerrarCarrito()"></div>
+    <h3 style="margin-bottom:1rem">🛒 Tu pedido</h3>
+    <div id="lista-carrito"></div>
+    <div style="display:flex;justify-content:space-between;
+                font-size:1.1rem;font-weight:700;margin-top:0.75rem;
+                padding-top:0.75rem;border-top:1px solid var(--border)">
+        <span>Total:</span>
+        <span id="total-carrito" style="color:var(--azul)">S/ 0.00</span>
+    </div>
+
+    <div class="checkout-section">
+        <h4 style="margin-bottom:0.75rem;font-size:0.9rem">
+            ¿Cómo te identificamos?
+        </h4>
+        <input class="field-checkout" type="text" id="input-nombre"
+               placeholder="Tu nombre (requerido)">
+        <input class="field-checkout" type="tel" id="input-whatsapp"
+               placeholder="WhatsApp (para enviarte el comprobante)">
+        <input class="field-checkout" type="email" id="input-email"
+               placeholder="Email (opcional)">
+
+        <h4 style="margin-bottom:0.5rem;font-size:0.9rem;margin-top:0.5rem">
+            ¿Cómo vas a pagar?
+        </h4>
+        <div class="medio-btns">
+            <button class="medio-btn" onclick="selMedio('efectivo', this)">
+                💵 Efectivo
+            </button>
+            <button class="medio-btn" onclick="selMedio('yape', this)">
+                💜 Yape
+            </button>
+            <button class="medio-btn" onclick="selMedio('plin', this)">
+                🟣 Plin
+            </button>
+            <button class="medio-btn" onclick="selMedio('tarjeta', this)">
+                💳 Tarjeta
+            </button>
+            <button class="medio-btn" onclick="selMedio('transferencia', this)">
+                🏦 Transf.
+            </button>
+        </div>
+
+        <button class="btn-pagar" id="btn-pagar" onclick="realizarPedido()"
+                disabled>
+            Enviar pedido →
+        </button>
+    </div>
+</div>
+
+<div id="overlay" onclick="cerrarCarrito()"
+     style="display:none;position:fixed;inset:0;
+            background:rgba(0,0,0,0.5);z-index:150"></div>
+
+<div id="modal-ok" style="display:none;position:fixed;inset:0;z-index:300;
+     background:rgba(0,0,0,0.8);align-items:center;justify-content:center">
+    <div style="background:var(--bg2);border-radius:16px;padding:2rem;
+                max-width:360px;width:90%;text-align:center">
+        <div style="font-size:3rem;margin-bottom:1rem">✅</div>
+        <h2 style="color:var(--verde);margin-bottom:0.5rem">
+            ¡Pedido registrado!
+        </h2>
+        <p style="color:var(--text2);font-size:0.875rem;margin-bottom:1rem">
+            Tu código de pedido:
+        </p>
+        <div id="codigo-pedido"
+             style="font-size:2rem;font-weight:800;color:var(--azul);
+                    font-family:monospace;margin-bottom:1rem">
+        </div>
+        <p style="color:var(--text2);font-size:0.8rem;margin-bottom:1.5rem">
+            Guárdalo o muéstralo en caja
+        </p>
+        <a id="link-comprobante" href="#"
+           style="display:block;padding:1rem;background:var(--azul);
+                  color:#0f1117;border-radius:10px;font-weight:800;
+                  text-decoration:none;font-size:1rem;margin-bottom:0.75rem">
+            📋 Ver mis compras y tickets
+        </a>
+        <button onclick="nuevoPedido()"
+                style="width:100%;padding:0.75rem;background:transparent;
+                       border:1px solid var(--border);border-radius:10px;
+                       color:var(--text2);cursor:pointer">
+            Hacer otro pedido
+        </button>
+    </div>
+</div>
+
+<script>
+const RUC = '{{ ruc_negocio }}';
+let carrito = [];
+let medioPago = '';
+
+function buscar(q) {
+    clearTimeout(window._busTimer);
+    window._busTimer = setTimeout(() => {
+        const url = new URL(location.href);
+        url.searchParams.set('q', q);
+        location.href = url.toString();
+    }, 600);
+}
+
+function filtrarCat(catId) {
+    const url = new URL(location.href);
+    url.searchParams.set('categoria', catId);
+    url.searchParams.delete('q');
+    location.href = url.toString();
+}
+
+function agregarAlCarrito(id, nombre, precio, stock) {
+    if (stock <= 0) { alert('Producto agotado'); return; }
+
+    const idx = carrito.findIndex(i => i.id === id);
+    if (idx >= 0) {
+        if (carrito[idx].cantidad >= stock) {
+            alert(`Solo tenemos ${stock} unidades disponibles`);
+            return;
+        }
+        carrito[idx].cantidad++;
+    } else {
+        carrito.push({id, nombre, precio, cantidad: 1, stock});
+    }
+    actualizarCarritoUI();
+
+    const fab = document.getElementById('fab-carrito');
+    fab.style.transform = 'scale(1.15)';
+    setTimeout(() => fab.style.transform = '', 200);
+}
+
+function actualizarCarritoUI() {
+    const total = carrito.reduce((s,i) => s + i.precio * i.cantidad, 0);
+    const count = carrito.reduce((s,i) => s + i.cantidad, 0);
+
+    document.getElementById('fab-count').textContent = count;
+    document.getElementById('fab-carrito').className =
+        count > 0 ? 'carrito-fab show' : 'carrito-fab';
+    document.getElementById('total-carrito').textContent =
+        `S/ ${total.toFixed(2)}`;
+
+    const lista = document.getElementById('lista-carrito');
+    lista.innerHTML = carrito.map((item, idx) => `
+        <div style="display:flex;justify-content:space-between;
+                    align-items:center;padding:0.5rem 0;
+                    border-bottom:1px solid var(--border)">
+            <div style="flex:1">
+                <div style="font-size:0.85rem">${item.nombre}</div>
+                <div style="font-size:0.75rem;color:var(--text2)">
+                    S/ ${item.precio.toFixed(2)} c/u
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:0.5rem">
+                <button onclick="cambiarCant(${idx}, -1)"
+                        style="width:28px;height:28px;border-radius:50%;
+                               background:var(--bg3);border:1px solid var(--border);
+                               color:var(--text);cursor:pointer">−</button>
+                <span style="min-width:24px;text-align:center;font-weight:700">
+                    ${item.cantidad}
+                </span>
+                <button onclick="cambiarCant(${idx}, 1)"
+                        style="width:28px;height:28px;border-radius:50%;
+                               background:var(--bg3);border:1px solid var(--border);
+                               color:var(--text);cursor:pointer">+</button>
+                <span style="min-width:60px;text-align:right;font-weight:700">
+                    S/ ${(item.precio * item.cantidad).toFixed(2)}
+                </span>
+            </div>
+        </div>
+    `).join('');
+
+    validarBotonPagar();
+}
+
+function cambiarCant(idx, delta) {
+    carrito[idx].cantidad += delta;
+    if (carrito[idx].cantidad <= 0) carrito.splice(idx, 1);
+    actualizarCarritoUI();
+}
+
+function abrirCarrito() {
+    document.getElementById('drawer-carrito').classList.add('open');
+    document.getElementById('overlay').style.display = 'block';
+}
+
+function cerrarCarrito() {
+    document.getElementById('drawer-carrito').classList.remove('open');
+    document.getElementById('overlay').style.display = 'none';
+}
+
+function selMedio(medio, btn) {
+    medioPago = medio;
+    document.querySelectorAll('.medio-btn').forEach(b =>
+        b.classList.remove('selected'));
+    btn.classList.add('selected');
+    validarBotonPagar();
+}
+
+function validarBotonPagar() {
+    const nombre = document.getElementById('input-nombre').value.trim();
+    const btn = document.getElementById('btn-pagar');
+    btn.disabled = carrito.length === 0 || !nombre || !medioPago;
+}
+
+document.getElementById('input-nombre').addEventListener('input', validarBotonPagar);
+
+async function realizarPedido() {
+    const nombre = document.getElementById('input-nombre').value.trim();
+    const whatsapp = document.getElementById('input-whatsapp').value.trim();
+    const email = document.getElementById('input-email').value.trim();
+
+    document.getElementById('btn-pagar').disabled = true;
+    document.getElementById('btn-pagar').textContent = 'Procesando...';
+
+    const resp = await fetch(`/catalogo-publico/${RUC}/pedido`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({
+            items: carrito.map(i => ({
+                id: i.id, nombre: i.nombre,
+                precio: i.precio, cantidad: i.cantidad,
+            })),
+            nombre, whatsapp, email,
+            medio_pago: medioPago,
+        })
+    });
+
+    const data = await resp.json();
+
+    if (data.ok) {
+        document.getElementById('codigo-pedido').textContent = data.codigo;
+        document.getElementById('link-comprobante').href = data.link_comprobante;
+        document.getElementById('modal-ok').style.display = 'flex';
+        cerrarCarrito();
+    } else {
+        alert('Error al registrar pedido: ' + (data.error || 'Intenta de nuevo'));
+        document.getElementById('btn-pagar').disabled = false;
+        document.getElementById('btn-pagar').textContent = 'Enviar pedido →';
+    }
+}
+
+function nuevoPedido() {
+    carrito = [];
+    medioPago = '';
+    actualizarCarritoUI();
+    document.getElementById('modal-ok').style.display = 'none';
+    document.getElementById('input-nombre').value = '';
+    document.getElementById('input-whatsapp').value = '';
+    document.getElementById('input-email').value = '';
+    document.querySelectorAll('.medio-btn').forEach(b =>
+        b.classList.remove('selected'));
+}
+</script>
+</body>
+</html>

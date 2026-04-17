@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mis Compras</title>
+<style>
+:root{--bg:#0f1117;--bg2:#161b27;--azul:#63b3ed;--verde:#68d391;
+      --text:#e2e8f0;--text2:#a0aec0;--border:rgba(99,179,237,0.12)}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,sans-serif;background:var(--bg);
+     color:var(--text);padding:1.5rem;max-width:480px;margin:0 auto}
+h1{font-size:1.25rem;margin-bottom:0.25rem}
+.compra-card{background:var(--bg2);border:1px solid var(--border);
+             border-radius:12px;padding:1rem;margin-bottom:0.75rem}
+.compra-header{display:flex;justify-content:space-between;margin-bottom:0.5rem}
+.compra-codigo{font-family:monospace;font-weight:700;color:var(--azul)}
+.compra-total{font-weight:700}
+.item-row{display:flex;justify-content:space-between;
+          font-size:0.8rem;color:var(--text2);padding:0.2rem 0}
+.badge-ok{background:rgba(104,211,145,0.1);color:var(--verde);
+          padding:0.2rem 0.6rem;border-radius:100px;font-size:0.7rem}
+</style>
+</head>
+<body>
+<div style="text-align:center;margin-bottom:1.5rem">
+    <div style="font-size:2rem;margin-bottom:0.5rem">🧾</div>
+    <h1>Mis compras</h1>
+    <p style="font-size:0.8rem;color:var(--text2)">
+        Historial disponible todo el año
+    </p>
+</div>
+
+<div id="contenido">
+    <p style="text-align:center;color:var(--text2)">Cargando...</p>
+</div>
+
+<script>
+fetch(`/mis-compras-data/{{ token }}`)
+    .then(r => r.json())
+    .then(data => {
+        const div = document.getElementById('contenido');
+        if (!data.compras || !data.compras.length) {
+            div.innerHTML = '<p style="text-align:center;color:var(--text2)">Sin compras registradas.</p>';
+            return;
+        }
+        div.innerHTML = data.compras.map(c => `
+            <div class="compra-card">
+                <div class="compra-header">
+                    <span class="compra-codigo">${c.codigo}</span>
+                    <span class="compra-total">S/ ${c.total.toFixed(2)}</span>
+                </div>
+                <div style="font-size:0.75rem;color:var(--text2);margin-bottom:0.5rem">
+                    ${c.fecha} · ${c.negocio}
+                </div>
+                ${c.items.map(i => `
+                    <div class="item-row">
+                        <span>${i.nombre}</span>
+                        <span>${i.cantidad} × S/${i.precio.toFixed(2)}</span>
+                    </div>
+                `).join('')}
+                <div style="margin-top:0.5rem">
+                    <span class="badge-ok">✓ ${c.estado}</span>
+                </div>
+            </div>
+        `).join('');
+    })
+    .catch(() => {
+        document.getElementById('contenido').innerHTML =
+            '<p style="text-align:center;color:var(--text2)">Error al cargar el historial.</p>';
+    });
+</script>
+</body>
+</html>

@@ -1,0 +1,346 @@
+{% extends "base.html" %}
+{% block title %}Cola de Caja — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content" style="padding:1rem">
+
+            <div style="display:flex;justify-content:space-between;
+                        align-items:center;margin-bottom:1rem">
+                <h1 style="font-size:1.25rem">🏪 Cola de Caja</h1>
+                <div style="display:flex;align-items:center;gap:0.75rem">
+                    <span id="ws-estado" style="font-size:0.75rem;
+                          color:var(--text3)">⚪ Conectando...</span>
+                </div>
+            </div>
+
+            <audio id="alerta-nuevo" src="/static/sounds/nuevo_pedido.mp3"
+                   preload="auto"></audio>
+            <audio id="alerta-pago" src="/static/sounds/pago_confirmado.mp3"
+                   preload="auto"></audio>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;
+                        gap:1rem;height:calc(100vh - 140px)">
+
+                <div style="background:var(--bg2);border:1px solid var(--border);
+                            border-radius:12px;overflow:hidden;
+                            display:flex;flex-direction:column">
+                    <div style="padding:0.75rem 1rem;background:rgba(255,107,53,0.1);
+                                border-bottom:1px solid var(--border);
+                                display:flex;justify-content:space-between;
+                                align-items:center">
+                        <strong style="color:var(--orange)">
+                            ⏳ EN COLA
+                        </strong>
+                        <span id="count-cola" class="badge badge-warn">
+                            {{ en_cola|length }}
+                        </span>
+                    </div>
+                    <div id="lista-cola" style="flex:1;overflow-y:auto;padding:0.75rem">
+                        {% for item in en_cola %}
+                        <div class="cola-card" id="cola-{{ item.id }}"
+                             data-id="{{ item.id }}"
+                             data-total="{{ item.total }}">
+                            <div style="display:flex;justify-content:space-between;
+                                        align-items:flex-start;margin-bottom:0.4rem">
+                                <span class="cola-codigo">{{ item.codigo_cliente }}</span>
+                                <span class="cola-medio">{{ item.medio_pago|upper }}</span>
+                            </div>
+                            <div class="cola-nombre">{{ item.nombre_cliente or '—' }}</div>
+                            <div style="display:flex;justify-content:space-between;
+                                        align-items:center;margin-top:0.5rem">
+                                <span class="cola-total">S/ {{ "%.2f"|format(item.total) }}</span>
+                                <span style="font-size:0.7rem;color:var(--text3)">{{ item.created_at }}</span>
+                            </div>
+                            {% if item.medio_pago == 'efectivo' %}
+                            <button onclick="abrirModalEfectivo({{ item.id }}, {{ item.total }})"
+                                    style="width:100%;margin-top:0.5rem;padding:0.45rem;
+                                           background:rgba(255,255,255,0.05);
+                                           border:1px solid var(--border);border-radius:6px;
+                                           color:var(--text2);cursor:pointer;font-size:0.75rem">
+                                💵 Cobrar efectivo
+                            </button>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <div class="cola-vacia">Sin pedidos en cola</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <div style="background:var(--bg2);border:1px solid var(--border);
+                            border-radius:12px;overflow:hidden;
+                            display:flex;flex-direction:column">
+                    <div style="padding:0.75rem 1rem;
+                                background:rgba(0,255,136,0.08);
+                                border-bottom:1px solid var(--border);
+                                display:flex;justify-content:space-between;
+                                align-items:center">
+                        <strong style="color:var(--green)">
+                            ✓ PAGADO — Listo para entregar
+                        </strong>
+                        <span id="count-pagado" class="badge badge-ok">
+                            {{ pagados|length }}
+                        </span>
+                    </div>
+                    <div id="lista-pagados" style="flex:1;overflow-y:auto;
+                                                   padding:0.75rem">
+                        {% for item in pagados %}
+                        <div class="cola-card pagado" id="pagado-{{ item.id }}">
+                            <div style="display:flex;justify-content:space-between;
+                                        align-items:flex-start;margin-bottom:0.4rem">
+                                <span class="cola-codigo">{{ item.codigo_cliente }}</span>
+                                <span class="cola-medio">✓ {{ item.medio_pago|upper }}</span>
+                            </div>
+                            <div class="cola-nombre">{{ item.nombre_cliente or '—' }}</div>
+                            <div style="display:flex;justify-content:space-between;
+                                        align-items:center;margin-top:0.5rem">
+                                <span class="cola-total">S/ {{ "%.2f"|format(item.total) }}</span>
+                                <span style="font-size:0.7rem;color:var(--text3)">{{ item.pagado_en }}</span>
+                            </div>
+                            <button onclick="marcarEntregado({{ item.id }})"
+                                    style="width:100%;margin-top:0.5rem;padding:0.5rem;
+                                           background:rgba(0,255,136,0.1);
+                                           border:1px solid rgba(0,255,136,0.3);
+                                           border-radius:6px;color:var(--green);
+                                           cursor:pointer;font-size:0.8rem">
+                                ✓ Marcar como entregado
+                            </button>
+                        </div>
+                        {% else %}
+                        <div class="cola-vacia">Sin pedidos pagados</div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="modal-efectivo" style="display:none;position:fixed;
+                 inset:0;background:rgba(0,0,0,0.7);z-index:200;
+                 align-items:center;justify-content:center">
+                <div style="background:var(--bg2);border-radius:16px;
+                            padding:2rem;width:320px;text-align:center">
+                    <h3 style="margin-bottom:1rem">💵 Cobro en efectivo</h3>
+                    <div id="modal-info" style="margin-bottom:1rem;
+                         color:var(--text2);font-size:0.875rem"></div>
+                    <input type="number" id="modal-monto" step="0.50"
+                           style="width:100%;font-size:1.5rem;text-align:center;
+                                  margin-bottom:1rem"
+                           placeholder="0.00">
+                    <div style="display:flex;gap:0.75rem">
+                        <button class="btn-secondary" style="flex:1"
+                                onclick="cerrarModalEfectivo()">
+                            Cancelar
+                        </button>
+                        <button class="btn-primary" style="flex:1"
+                                onclick="confirmarEfectivo()">
+                            ✓ Confirmar
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+</div>
+
+<style>
+.cola-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 0.85rem;
+    margin-bottom: 0.6rem;
+    transition: all 0.3s;
+}
+.cola-card.nuevo {
+    animation: slideIn 0.4s ease;
+    border-color: var(--orange);
+}
+.cola-card.pagado {
+    border-color: rgba(0,255,136,0.3);
+    background: rgba(0,255,136,0.04);
+}
+@keyframes slideIn {
+    from { opacity:0; transform:translateY(-10px); }
+    to { opacity:1; transform:translateY(0); }
+}
+.cola-codigo {
+    font-family: monospace;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--cyan);
+}
+.cola-nombre {
+    font-size: 0.875rem;
+    color: var(--text2);
+    margin: 0.2rem 0;
+}
+.cola-total {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: var(--text);
+}
+.cola-medio {
+    font-size: 0.75rem;
+    padding: 0.2rem 0.5rem;
+    border-radius: 100px;
+}
+.cola-vacia {
+    text-align: center;
+    color: var(--text3);
+    font-size: 0.875rem;
+    padding: 2rem;
+}
+</style>
+
+<script>
+let ws;
+let idColaEfectivo = null;
+
+function conectarWS() {
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${proto}//${location.host}/ventas/caja/ws`);
+
+    ws.onopen = () => {
+        document.getElementById('ws-estado').textContent = '🟢 En vivo';
+        document.getElementById('ws-estado').style.color = 'var(--green)';
+    };
+
+    ws.onclose = () => {
+        document.getElementById('ws-estado').textContent = '🔴 Desconectado';
+        document.getElementById('ws-estado').style.color = 'var(--red)';
+        setTimeout(conectarWS, 3000);
+    };
+
+    ws.onmessage = (e) => {
+        manejarMensaje(JSON.parse(e.data));
+    };
+}
+
+function manejarMensaje(msg) {
+    if (msg.tipo === 'nuevo_pedido') {
+        agregarACola(msg.pedido);
+        try { document.getElementById('alerta-nuevo').play(); } catch(e) {}
+    } else if (msg.tipo === 'pago_confirmado') {
+        moverAPagado(msg.id_cola, msg.monto, msg.medio);
+        try { document.getElementById('alerta-pago').play(); } catch(e) {}
+    } else if (msg.tipo === 'entregado') {
+        const el = document.getElementById(`pagado-${msg.id_cola}`);
+        if (el) {
+            el.style.opacity = '0';
+            setTimeout(() => el.remove(), 300);
+        }
+    }
+    actualizarContadores();
+}
+
+function agregarACola(pedido) {
+    const lista = document.getElementById('lista-cola');
+    const vacia = lista.querySelector('.cola-vacia');
+    if (vacia) vacia.remove();
+
+    const div = document.createElement('div');
+    div.className = 'cola-card nuevo';
+    div.id = `cola-${pedido.id}`;
+    div.dataset.id = pedido.id;
+    div.dataset.total = pedido.total;
+    div.innerHTML = renderColaCard(pedido);
+    lista.prepend(div);
+}
+
+function moverAPagado(idCola, monto, medio) {
+    const el = document.getElementById(`cola-${idCola}`);
+    if (!el) return;
+
+    el.classList.add('pagado');
+
+    const listaPagados = document.getElementById('lista-pagados');
+    const vacia = listaPagados.querySelector('.cola-vacia');
+    if (vacia) vacia.remove();
+
+    const nuevo = el.cloneNode(true);
+    nuevo.id = `pagado-${idCola}`;
+    nuevo.innerHTML += `
+        <button onclick="marcarEntregado(${idCola})"
+                style="width:100%;margin-top:0.5rem;padding:0.5rem;
+                       background:rgba(0,255,136,0.1);
+                       border:1px solid rgba(0,255,136,0.3);
+                       border-radius:6px;color:var(--green);
+                       cursor:pointer;font-size:0.8rem">
+            ✓ Marcar como entregado
+        </button>`;
+    listaPagados.prepend(nuevo);
+    el.remove();
+}
+
+function renderColaCard(p) {
+    const iconMedio = {
+        efectivo:'💵', yape:'💜', plin:'🟣',
+        tarjeta:'💳', transferencia:'🏦'
+    };
+    return `
+        <div style="display:flex;justify-content:space-between;
+                    align-items:flex-start;margin-bottom:0.4rem">
+            <span class="cola-codigo">${p.codigo_cliente}</span>
+            <span class="cola-medio">${iconMedio[p.medio_pago]||'💰'}
+                ${p.medio_pago.toUpperCase()}</span>
+        </div>
+        <div class="cola-nombre">${p.nombre_cliente || '—'}</div>
+        <div style="display:flex;justify-content:space-between;
+                    align-items:center;margin-top:0.5rem">
+            <span class="cola-total">S/ ${parseFloat(p.total).toFixed(2)}</span>
+            <span style="font-size:0.7rem;color:var(--text3)">${p.created_at}</span>
+        </div>
+        ${p.medio_pago === 'efectivo' ? `
+        <button onclick="abrirModalEfectivo(${p.id}, ${p.total})"
+                style="width:100%;margin-top:0.5rem;padding:0.45rem;
+                       background:rgba(255,255,255,0.05);
+                       border:1px solid var(--border);border-radius:6px;
+                       color:var(--text2);cursor:pointer;font-size:0.75rem">
+            💵 Cobrar efectivo
+        </button>` : ''}
+    `;
+}
+
+function abrirModalEfectivo(idCola, total) {
+    idColaEfectivo = idCola;
+    document.getElementById('modal-info').textContent =
+        `Pedido por S/${parseFloat(total).toFixed(2)}`;
+    document.getElementById('modal-monto').value = parseFloat(total).toFixed(2);
+    document.getElementById('modal-efectivo').style.display = 'flex';
+}
+
+function cerrarModalEfectivo() {
+    document.getElementById('modal-efectivo').style.display = 'none';
+    idColaEfectivo = null;
+}
+
+async function confirmarEfectivo() {
+    const monto = parseFloat(document.getElementById('modal-monto').value);
+    if (!monto || !idColaEfectivo) return;
+
+    await fetch(`/ventas/caja/marcar-pagado/${idColaEfectivo}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({monto}),
+    });
+    cerrarModalEfectivo();
+}
+
+async function marcarEntregado(idCola) {
+    await fetch(`/ventas/caja/marcar-entregado/${idCola}`, {method:'POST'});
+}
+
+function actualizarContadores() {
+    document.getElementById('count-cola').textContent =
+        document.querySelectorAll('#lista-cola .cola-card').length;
+    document.getElementById('count-pagado').textContent =
+        document.querySelectorAll('#lista-pagados .cola-card').length;
+}
+
+conectarWS();
+</script>
+{% endblock %}

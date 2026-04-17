@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+{% block title %}Control de Salida — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content" style="max-width:600px;margin:0 auto">
+            <div class="page-header" style="text-align:center">
+                <div style="font-size:2rem;margin-bottom:0.5rem">🚪</div>
+                <h1>Control de Salida</h1>
+                <p style="color:var(--text2);font-size:0.875rem">
+                    Busca el código o nombre del cliente para confirmar entrega
+                </p>
+            </div>
+
+            <div class="form-section">
+                <input type="text" id="input-busqueda"
+                       class="field-input"
+                       placeholder="Ingresa código (ej: 1704-001) o nombre..."
+                       oninput="buscarPedido(this.value)"
+                       autocomplete="off"
+                       style="font-size:1.1rem;text-align:center">
+            </div>
+
+            <div id="resultados" style="margin-top:1rem"></div>
+        </main>
+    </div>
+</div>
+
+<script>
+let timer;
+async function buscarPedido(q) {
+    clearTimeout(timer);
+    if (q.length < 2) {
+        document.getElementById('resultados').innerHTML = '';
+        return;
+    }
+    timer = setTimeout(async () => {
+        const r = await fetch(`/ventas/vigilante/buscar?q=${encodeURIComponent(q)}`);
+        const data = await r.json();
+        renderResultados(data.resultados);
+    }, 300);
+}
+
+function renderResultados(items) {
+    const div = document.getElementById('resultados');
+    if (!items.length) {
+        div.innerHTML = `<div class="coming-soon-card">
+            <p style="color:var(--text3)">No se encontró pedido pagado con ese código o nombre.</p>
+        </div>`;
+        return;
+    }
+    div.innerHTML = items.map(item => `
+        <div style="background:var(--bg2);border:1px solid rgba(0,255,136,0.3);
+                    border-radius:12px;padding:1.25rem;margin-bottom:0.75rem">
+            <div style="display:flex;justify-content:space-between;
+                        align-items:flex-start;margin-bottom:0.75rem">
+                <div>
+                    <div style="font-family:monospace;font-size:1.25rem;
+                                font-weight:700;color:var(--cyan)">
+                        ${item.codigo}
+                    </div>
+                    <div style="color:var(--text2);font-size:0.875rem">
+                        ${item.nombre}
+                    </div>
+                </div>
+                <div style="text-align:right">
+                    <div style="font-size:1.1rem;font-weight:700">
+                        S/ ${item.total.toFixed(2)}
+                    </div>
+                    <div style="font-size:0.75rem;color:var(--text3)">
+                        Pagado: ${item.pagado_en}
+                    </div>
+                </div>
+            </div>
+            <span class="badge badge-ok" style="margin-bottom:0.75rem;
+                  display:inline-block">✓ PAGADO</span>
+            <br>
+            <button onclick="confirmarEntrega(${item.id_cola})"
+                    class="btn-primary" style="width:100%;margin-top:0.5rem">
+                ✓ Confirmar entrega y salida
+            </button>
+        </div>
+    `).join('');
+}
+
+async function confirmarEntrega(idCola) {
+    const r = await fetch(`/ventas/caja/marcar-entregado/${idCola}`,
+        {method:'POST'});
+    const data = await r.json();
+    if (data.ok) {
+        document.getElementById('input-busqueda').value = '';
+        document.getElementById('resultados').innerHTML = `
+            <div style="text-align:center;padding:2rem;color:var(--green)">
+                <div style="font-size:3rem">✅</div>
+                <h3>¡Entrega confirmada!</h3>
+                <p style="color:var(--text2);margin-top:0.5rem">
+                    El cliente puede salir.
+                </p>
+            </div>`;
+        setTimeout(() => {
+            document.getElementById('resultados').innerHTML = '';
+        }, 3000);
+    }
+}
+</script>
+{% endblock %}
