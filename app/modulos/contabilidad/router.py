@@ -2,7 +2,7 @@ from fastapi import APIRouter, Request, Depends, Query
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 from sqlalchemy.orm import selectinload
 from datetime import date, datetime
 from app.tenant import get_tenant_session
@@ -387,3 +387,22 @@ async def cont_banco_dominios(request: Request,
     dominios = result.scalars().all()
     return templates.TemplateResponse("contabilidad/banco_dominios.html",
         ctx(request, dominios=dominios))
+
+
+@router.post("/banco/limpiar-destino")
+async def cont_banco_limpiar_destino(
+    request: Request,
+    db: AsyncSession = Depends(get_tenant_session),
+):
+    """Elimina la palabra 'Destino' pegada al final de nombre_contraparte
+    en movimientos bancarios ya importados (legacy)."""
+    await db.execute(text("""
+        UPDATE cont_movimientos_bancarios
+        SET nombre_contraparte = TRIM(
+            REGEXP_REPLACE(nombre_contraparte,
+                '\\s*Destino\\s*$', '', 'i')
+        )
+        WHERE nombre_contraparte ~* 'Destino$'
+    """))
+    await db.commit()
+    return JSONResponse({"ok": True, "msg": "Limpieza completada"})
