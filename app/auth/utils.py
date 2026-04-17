@@ -15,8 +15,11 @@ def verify_password(plain: str, hashed: str) -> bool:
     try:
         plain_bytes = plain.encode('utf-8')[:72]
         hashed_bytes = hashed.encode('utf-8') if isinstance(hashed, str) else hashed
-        return bcrypt.checkpw(plain_bytes, hashed_bytes)
-    except Exception:
+        result = bcrypt.checkpw(plain_bytes, hashed_bytes)
+        print(f"[AUTH] verify_password result={result} hash_prefix={hashed[:20]}")
+        return result
+    except Exception as e:
+        print(f"[AUTH] verify_password ERROR: {e}")
         return False
 
 
