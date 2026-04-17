@@ -200,7 +200,11 @@ def extraer_datos_movimiento(subject: str, body: str, banco: str) -> dict:
                 pass
 
     texto_lower = texto.lower()
-    if any(w in texto_lower for w in PALABRAS_ABONO):
+    if "cuenta cargo:" in texto_lower or \
+       "realizaste" in texto_lower or \
+       "enviaste" in texto_lower:
+        datos["tipo"] = "cargo"
+    elif any(w in texto_lower for w in PALABRAS_ABONO):
         datos["tipo"] = "abono"
     elif any(w in texto_lower for w in PALABRAS_CARGO):
         datos["tipo"] = "cargo"
@@ -506,34 +510,29 @@ def _parse_fecha_hora(date_str: str) -> tuple[date, str | None]:
 
 async def _actualizar_dominio(db, dominio: str, banco: str,
                                confianza: str, dominios_aprendidos: dict):
-    from sqlalchemy import select, update
-    from app.modulos.contabilidad.models import DominioBancario
-
-    result = await db.execute(
-        select(DominioBancario.id).where(DominioBancario.dominio == dominio))
-    existe = result.scalar_one_or_none()
+    from sqlalchemy import text as sql_text
 
     hoy = date.today()
+    estado = "confirmado" if confianza == "alta" else "nuevo"
 
-    if existe:
-        stmt = update(DominioBancario).where(
-            DominioBancario.dominio == dominio
-        ).values({
-            "ultima_vez": datetime.now(),
-            "total_correos": DominioBancario.total_correos + 1,
-            "total_hoy": DominioBancario.total_hoy + 1,
-            "updated_at": datetime.now(),
-        })
-        await db.execute(stmt)
-    else:
-        nuevo = DominioBancario(
-            dominio=dominio,
-            banco=banco,
-            estado="confirmado" if confianza == "alta" else "nuevo",
-            fuente="automatico",
-            total_correos=1,
-            total_hoy=1,
-            fecha_conteo_hoy=hoy,
-        )
-        db.add(nuevo)
-        dominios_aprendidos[dominio] = {"banco": banco, "estado": nuevo.estado}
+    await db.execute(sql_text("""
+        INSERT INTO cont_dominios_bancarios
+            (dominio, banco, estado, fuente, primera_vez, ultima_vez,
+             total_correos, total_hoy, fecha_conteo_hoy, created_at, updated_at)
+        VALUES
+            (:dom, :banco, :estado, 'automatico', NOW(), NOW(),
+             1, 1, :hoy, NOW(), NOW())
+        ON CONFLICT (dominio) DO UPDATE SET
+            ultima_vez = NOW(),
+            total_correos = cont_dominios_bancarios.total_correos + 1,
+            total_hoy = CASE
+                WHEN cont_dominios_bancarios.fecha_conteo_hoy = :hoy
+                THEN cont_dominios_bancarios.total_hoy + 1
+                ELSE 1
+            END,
+            fecha_conteo_hoy = :hoy,
+            updated_at = NOW()
+    """), {"dom": dominio, "banco": banco, "estado": estado, "hoy": hoy})
+
+    if dominio not in dominios_aprendidos:
+        dominios_aprendidos[dominio] = {"banco": banco, "estado": estado}
