@@ -6,6 +6,15 @@ from sqlalchemy import select, func
 from sqlalchemy.orm import selectinload
 from decimal import Decimal
 from datetime import datetime, date
+import json
+
+
+class DecimalEncoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, Decimal):
+            return float(obj)
+        return super().default(obj)
+
 from app.tenant import get_tenant_session
 from app.modulos.ventas.models import Pedido, PedidoItem, CajaApertura
 from app.modulos.ventas.service import (
@@ -355,11 +364,15 @@ async def pedido_agregar_item(
     await db.commit()
     await db.refresh(item)
 
-    return JSONResponse({
-        "item_id": item.id,
-        "totales": totales,
-        "items_count": len(todos_items),
-    })
+    return JSONResponse(
+        content=json.loads(
+            json.dumps({
+                "item_id": item.id,
+                "totales": totales,
+                "items_count": len(todos_items),
+            }, cls=DecimalEncoder)
+        )
+    )
 
 
 # ── Eliminar item del pedido ──────────────────
@@ -509,3 +522,98 @@ async def pedido_detalle(request: Request, id: int,
 
     return templates.TemplateResponse("ventas/pedido_detalle.html",
         ctx(request, pedido=pedido, items=items))
+
+
+# ── pagoOK: Validacion de pagos por foto ─────────────────────────────
+
+from app.modulos.contabilidad.ocr_service import extraer_datos_comprobante
+from app.modulos.contabilidad.pagook_service import validar_pago_foto
+
+
+@router.get("/pos/{id_pv}/validar-pago", response_class=HTMLResponse)
+async def pagook_get(
+    request: Request,
+    id_pv: int,
+    pedido_id: int = Query(default=None),
+    monto: str = Query(default=None),
+    db: AsyncSession = Depends(get_tenant_session),
+):
+    """Pantalla de validacion de pago Yape/Plin con foto."""
+    return templates.TemplateResponse("ventas/pagook.html", ctx(request,
+        id_punto_venta=id_pv,
+        pedido_id=pedido_id,
+        monto_esperado=monto or "0",
+    ))
+
+
+@router.post("/pos/validar-pago/foto")
+async def pagook_procesar_foto(
+    request: Request,
+    db: AsyncSession = Depends(get_tenant_session),
+):
+    """Recibe foto del comprobante, ejecuta OCR y valida el pago."""
+    form = await request.form()
+    foto = form.get("foto")
+    id_pedido = int(form.get("pedido_id") or 0) or None
+    id_pv = int(form.get("id_punto_venta") or 0) or None
+    monto_esperado = form.get("monto_esperado", "0")
+    id_usuario = int(getattr(request.state, "user_id", 0) or 0)
+
+    if not foto:
+        return JSONResponse({"ok": False, "error": "Sin foto"}, status_code=400)
+
+    foto_bytes = await foto.read()
+
+    import uuid
+    from pathlib import Path
+    foto_dir = Path("app/static/pagook_fotos")
+    foto_dir.mkdir(parents=True, exist_ok=True)
+    foto_nombre = f"{uuid.uuid4().hex}.jpg"
+    foto_path = foto_dir / foto_nombre
+    foto_path.write_bytes(foto_bytes)
+    foto_url = f"/static/pagook_fotos/{foto_nombre}"
+
+    ocr_result = await extraer_datos_comprobante(foto_bytes)
+    print(f"[pagoOK] OCR: {ocr_result}")
+
+    monto_validar = ocr_result.get("monto")
+    if not monto_validar and monto_esperado:
+        try:
+            monto_validar = Decimal(monto_esperado)
+        except Exception:
+            pass
+
+    resultado = await validar_pago_foto(
+        db=db,
+        numero_operacion=ocr_result.get("numero_operacion"),
+        monto=monto_validar,
+        banco=ocr_result.get("banco"),
+        id_pedido=id_pedido,
+        id_punto_venta=id_pv,
+        id_usuario=id_usuario,
+        foto_url=foto_url,
+        texto_ocr=ocr_result.get("texto_completo", "")[:500],
+    )
+
+    return JSONResponse(resultado)
+
+
+@router.post("/pos/validar-pago/manual")
+async def pagook_manual(
+    request: Request,
+    db: AsyncSession = Depends(get_tenant_session),
+):
+    """Validacion manual ingresando N de operacion a mano."""
+    data = await request.json()
+    id_usuario = int(getattr(request.state, "user_id", 0) or 0)
+
+    resultado = await validar_pago_foto(
+        db=db,
+        numero_operacion=data.get("numero_operacion"),
+        monto=Decimal(str(data.get("monto", "0"))) if data.get("monto") else None,
+        banco=data.get("banco"),
+        id_pedido=data.get("pedido_id"),
+        id_punto_venta=data.get("id_punto_venta"),
+        id_usuario=id_usuario,
+    )
+    return JSONResponse(resultado)
