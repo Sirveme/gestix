@@ -263,11 +263,11 @@ def extraer_datos_movimiento(subject: str, body: str, banco: str) -> dict:
         if match:
             dest = match.group(1).strip()
             dest = re.sub(r'\s+', ' ', dest)
-            # Si el regex tambien absorbio "Destino: <app>" al final, separarlo
+            # Si el regex tambien absorbio "Destino[: <app>]" al final, cortarlo
             destino_app = None
-            m_dest = re.search(r'\bdestino\b[:\s]+(.+)$', dest, re.IGNORECASE)
+            m_dest = re.search(r'\s+\bdestino\b[\s:]*(.*)$', dest, re.IGNORECASE)
             if m_dest:
-                destino_app = m_dest.group(1).strip()
+                destino_app = (m_dest.group(1).strip() or None)
                 dest = dest[:m_dest.start()].strip()
             if len(dest) > 2 and _es_nombre_valido(dest):
                 datos["destinatario"] = dest
