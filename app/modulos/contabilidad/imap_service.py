@@ -258,7 +258,7 @@ def get_email_body(msg) -> str:
                 charset, errors="replace")
         except Exception:
             pass
-    return body[:3000]
+    return body[:15000]
 
 
 # -- Funcion principal ------------------------------------------------
@@ -420,9 +420,10 @@ async def importar_movimientos_bancarios(
 
                 # CASO 6: Correo bancario legitimo
                 body = get_email_body(msg)
-                print(f"[IMAP BODY PREVIEW] {body[:2000]}")
-                montos = re.findall(r"S[/\.]\s*[\d,]+\.?\d*", body)
-                print(f"[IMAP MONTOS ENCONTRADOS] {montos}")
+                print(f"[IMAP BODY INICIO] {body[:500]}")
+                print(f"[IMAP BODY FINAL] {body[-1000:]}")
+                montos = re.findall(r"\d+[\.,]\d{2}", body)
+                print(f"[IMAP NUMEROS] {montos[:20]}")
                 datos = extraer_datos_movimiento(subject, body, banco)
 
                 if not datos.get("monto"):
