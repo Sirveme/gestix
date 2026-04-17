@@ -5,6 +5,7 @@ Sistema de aprendizaje de dominios + deteccion de correos sospechosos.
 """
 import imaplib
 import email
+import html as html_lib
 import re
 import os
 from email.header import decode_header
@@ -243,9 +244,10 @@ def get_email_body(msg) -> str:
                     pass
             elif ctype == "text/html" and not body:
                 try:
-                    html = part.get_payload(decode=True).decode(
+                    html_content = part.get_payload(decode=True).decode(
                         charset, errors="replace")
-                    body = re.sub(r"<[^>]+>", " ", html)
+                    body = re.sub(r"<[^>]+>", " ", html_content)
+                    body = html_lib.unescape(body)
                     body = re.sub(r"\s+", " ", body)
                 except Exception:
                     pass
@@ -418,7 +420,9 @@ async def importar_movimientos_bancarios(
 
                 # CASO 6: Correo bancario legitimo
                 body = get_email_body(msg)
-                print(f"[IMAP BODY PREVIEW] {body[:500]}")
+                print(f"[IMAP BODY PREVIEW] {body[:2000]}")
+                montos = re.findall(r"S[/\.]\s*[\d,]+\.?\d*", body)
+                print(f"[IMAP MONTOS ENCONTRADOS] {montos}")
                 datos = extraer_datos_movimiento(subject, body, banco)
 
                 if not datos.get("monto"):
