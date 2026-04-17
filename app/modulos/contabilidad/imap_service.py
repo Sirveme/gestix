@@ -154,9 +154,18 @@ EXTRACTORES = {
         r"codigo[:\s]+(\w+)",
         r"n[.]\s*(\d{6,})",
     ],
+    "numero_operacion": [
+        r"n[°ºo.]*\s*(?:de\s+)?operaci[oó]n[:\s#]+(\w{4,30})",
+        r"operaci[oó]n[:\s#]+(\w{4,30})",
+        r"c[oó]digo\s+de\s+operaci[oó]n[:\s#]+(\w{4,30})",
+        r"n[°ºo.]*\s+(\d{6,})",
+    ],
     "nombre": [
         r"(?:de|desde|remitente)[:\s]+([A-Z][a-zA-Z\s]{2,50})",
         r"(?:enviado por|pagado por)[:\s]+([A-Z][a-zA-Z\s]{2,50})",
+    ],
+    "destinatario": [
+        r"(?:destinatario|para|beneficiario|enviado a|transferiste a|pagaste a)[:\s]+([A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑáéíóúñ\s\.]{2,80})",
     ],
     "celular": [
         r"(\+?51\s?9\d{8})",
@@ -183,7 +192,9 @@ def extraer_datos_movimiento(subject: str, body: str, banco: str) -> dict:
         "tipo": "abono",
         "monto": None,
         "referencia": None,
+        "numero_operacion": None,
         "nombre_contraparte": None,
+        "destinatario": None,
         "celular_contraparte": None,
         "tipo_operacion": banco if banco in ("yape", "plin") else "transferencia",
     }
@@ -213,6 +224,22 @@ def extraer_datos_movimiento(subject: str, body: str, banco: str) -> dict:
         match = re.search(pattern, texto, re.IGNORECASE)
         if match:
             datos["referencia"] = match.group(1).strip()[:50]
+            break
+
+    for pattern in EXTRACTORES["numero_operacion"]:
+        match = re.search(pattern, texto, re.IGNORECASE)
+        if match:
+            datos["numero_operacion"] = match.group(1).strip()[:50]
+            break
+
+    for pattern in EXTRACTORES["destinatario"]:
+        match = re.search(pattern, texto, re.IGNORECASE)
+        if match:
+            dest = match.group(1).strip()
+            # Limpiar saltos y espacios extra
+            dest = re.sub(r'\s+', ' ', dest)
+            if len(dest) > 2:
+                datos["destinatario"] = dest
             break
 
     for pattern in EXTRACTORES["nombre"]:
@@ -331,7 +358,7 @@ async def importar_movimientos_bancarios(
 
                 print(f"[IMAP] Procesando: from={from_addr[:60]}, subject={subject[:60]}")
 
-                # Verificar duplicado por Message-ID
+                # Verificar duplicado por Message-ID ANTES de procesar
                 if message_id:
                     r_dup = await db.execute(
                         select(MovimientoBancario).where(
@@ -339,14 +366,18 @@ async def importar_movimientos_bancarios(
                         ).limit(1)
                     )
                     if r_dup.scalar_one_or_none():
-                        r_dup2 = await db.execute(
-                            select(CorreoSospechoso).where(
-                                CorreoSospechoso.email_mensaje_id == message_id
-                            ).limit(1)
-                        )
-                        if r_dup2.scalar_one_or_none():
-                            stats["duplicados"] += 1
-                            continue
+                        stats["duplicados"] += 1
+                        print(f"[IMAP] Duplicado (movimiento): {subject[:50]}")
+                        continue
+                    r_dup2 = await db.execute(
+                        select(CorreoSospechoso).where(
+                            CorreoSospechoso.email_mensaje_id == message_id
+                        ).limit(1)
+                    )
+                    if r_dup2.scalar_one_or_none():
+                        stats["duplicados"] += 1
+                        print(f"[IMAP] Duplicado (sospechoso): {subject[:50]}")
+                        continue
 
                 # Parsear DKIM
                 auth = parsear_authentication_results(auth_results)
@@ -448,8 +479,9 @@ async def importar_movimientos_bancarios(
                     monto=datos["monto"],
                     descripcion=subject[:300],
                     referencia=datos.get("referencia"),
+                    numero_operacion=datos.get("numero_operacion"),
                     tipo_operacion=datos.get("tipo_operacion", "transferencia"),
-                    nombre_contraparte=datos.get("nombre_contraparte"),
+                    nombre_contraparte=datos.get("destinatario") or datos.get("nombre_contraparte"),
                     celular_contraparte=datos.get("celular_contraparte"),
                     confianza=confianza,
                     email_mensaje_id=message_id or None,
