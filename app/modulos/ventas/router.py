@@ -191,7 +191,10 @@ async def pos_pantalla(request: Request, id_pv: int,
     igv_tasa = float(impuestos.igv) if impuestos else 18.0
 
     r_medios = await db.execute(
-        select(ConfigMedioCobro).where(ConfigMedioCobro.activo == True))
+        select(ConfigMedioCobro)
+        .where(ConfigMedioCobro.activo == True)
+        .distinct(ConfigMedioCobro.tipo)
+        .order_by(ConfigMedioCobro.tipo))
     medios_cobro = r_medios.scalars().all()
 
     return templates.TemplateResponse("ventas/pos.html", ctx(request,
