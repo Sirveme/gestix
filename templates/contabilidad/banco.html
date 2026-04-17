@@ -219,7 +219,6 @@ const CAMPOS_DETALLE = [
     ['banco', 'Banco'],
     ['tipo', 'Tipo'],
     ['monto', 'Monto'],
-    ['moneda', 'Moneda'],
     ['tipo-operacion', 'Tipo operacion'],
     ['numero-operacion', 'N° operacion'],
     ['referencia', 'Referencia'],
@@ -229,29 +228,35 @@ const CAMPOS_DETALLE = [
     ['confianza', 'Confianza'],
     ['estado-cruce', 'Estado cruce'],
     ['id-venta', 'ID venta'],
-    ['id-compra', 'ID compra'],
-    ['diferencia-monto', 'Diferencia monto'],
     ['nota-cruce', 'Nota cruce'],
-    ['saldo-posterior', 'Saldo posterior'],
-    ['origen', 'Origen'],
-    ['email-asunto', 'Asunto correo'],
     ['email-fecha', 'Fecha correo'],
-    ['email-mensaje-id', 'Message-ID'],
-    ['dominio-dkim', 'Dominio DKIM'],
     ['importado-en', 'Importado'],
 ];
 
-function verDetalle(id) {
-    const row = document.getElementById(`row-${id}`);
-    if (!row) return;
-    const tbody = document.getElementById('modal-detalle-body');
-    const filas = CAMPOS_DETALLE.map(([attr, label]) => {
+const CAMPOS_SEGURIDAD = [
+    ['dominio-dkim', 'Dominio DKIM'],
+];
+
+function _renderFilas(row, campos) {
+    return campos.map(([attr, label]) => {
         const val = row.dataset[attr.replace(/-([a-z])/g, (_, c) => c.toUpperCase())];
         const display = val && val.length > 0 ? val : '—';
         return `<tr><th style="text-align:left;padding:0.35rem 0.75rem;width:40%;color:var(--text2)">${label}</th>` +
                `<td style="padding:0.35rem 0.75rem;word-break:break-word">${display.replace(/</g,'&lt;')}</td></tr>`;
     }).join('');
-    tbody.innerHTML = filas;
+}
+
+function verDetalle(id) {
+    const row = document.getElementById(`row-${id}`);
+    if (!row) return;
+    const tbody = document.getElementById('modal-detalle-body');
+    const principales = _renderFilas(row, CAMPOS_DETALLE);
+    const seguridad = _renderFilas(row, CAMPOS_SEGURIDAD);
+    tbody.innerHTML = principales +
+        `<tr><td colspan="2" style="padding:0.5rem 0">` +
+        `<details><summary style="cursor:pointer;color:var(--text2);font-size:0.85rem;padding:0.35rem 0.75rem">Seguridad</summary>` +
+        `<table style="width:100%;margin-top:0.25rem"><tbody>${seguridad}</tbody></table>` +
+        `</details></td></tr>`;
     document.getElementById('modal-detalle').style.display = 'flex';
 }
 
