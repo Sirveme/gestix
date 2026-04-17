@@ -291,8 +291,16 @@ async function agregarProducto(data) {
     });
     const result = await resp.json();
 
-    POS.items.push({ ...data, item_id: result.item_id });
-    POS.totales = result.totales;
+    const cant = parseFloat(data.cantidad) || 0;
+    const pu = parseFloat(data.precio_unitario) || 0;
+    const itemTotal = Math.round(cant * pu * 100) / 100;
+
+    POS.items.push({ ...data, item_id: result.item_id, total: itemTotal });
+    POS.totales = {
+        subtotal: parseFloat(result.totales?.subtotal || 0),
+        igv: parseFloat(result.totales?.igv || 0),
+        total: parseFloat(result.totales?.total || 0),
+    };
     renderCarrito();
     actualizarTotales();
     document.getElementById('btn-cobrar').disabled = POS.items.length === 0;
