@@ -165,6 +165,10 @@ class ConfigImpuestos(Base):
     uit = Column(Numeric(10, 2), default=5350.00)
     vigencia_desde = Column(Date)
 
+    exonerado_igv = Column(Boolean, default=False)
+    zona = Column(String(50), nullable=True)
+    # amazonia | costa | sierra | selva
+
     updated_at = Column(DateTime, default=datetime.now, onupdate=datetime.now)
     updated_by = Column(Integer)
 
