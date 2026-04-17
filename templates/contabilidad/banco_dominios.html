@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+{% block title %}Dominios Bancarios — Gestix{% endblock %}
+{% block content %}
+<div class="app-wrap">
+    {% include "partials/sidebar.html" %}
+    <div class="app-main">
+        {% include "partials/topbar.html" %}
+        <main class="main-content">
+            <div class="page-header">
+                <a href="/contabilidad/banco" class="page-back">&larr; Conciliacion</a>
+                <h1>Dominios Bancarios Verificados</h1>
+                <span class="page-sub">Resumen de dominios DKIM procesados</span>
+            </div>
+
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>Dominio DKIM</th><th>Banco</th><th>Estado</th>
+                            <th>Fuente</th><th>Total correos</th><th>Hoy</th>
+                            <th>Ultima vez</th></tr>
+                    </thead>
+                    <tbody>
+                    {% for d in dominios %}
+                    <tr>
+                        <td><code>{{ d.dominio }}</code></td>
+                        <td>{{ d.banco.upper() }}</td>
+                        <td>
+                            {% if d.estado == 'confirmado' %}
+                            <span class="badge badge-ok">Confirmado</span>
+                            {% elif d.estado == 'nuevo' %}
+                            <span class="badge badge-warn">Nuevo</span>
+                            {% elif d.estado == 'sospechoso' %}
+                            <span class="badge" style="background:rgba(255,68,68,0.1);color:var(--red)">Sospechoso</span>
+                            {% elif d.estado == 'bloqueado' %}
+                            <span class="badge badge-off">Bloqueado</span>
+                            {% endif %}
+                        </td>
+                        <td><span class="sub">{{ d.fuente }}</span></td>
+                        <td>{{ d.total_correos or 0 }}</td>
+                        <td>{{ d.total_hoy or 0 }}</td>
+                        <td><span class="sub">{{ d.ultima_vez.strftime('%d/%m/%Y %H:%M') if d.ultima_vez else '&mdash;' }}</span></td>
+                    </tr>
+                    {% else %}
+                    <tr><td colspan="7" class="table-empty">Sin dominios registrados aun.</td></tr>
+                    {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</div>
+{% endblock %}

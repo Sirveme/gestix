@@ -10,9 +10,14 @@
                 <div>
                     <a href="/contabilidad/" class="page-back">&larr; Contabilidad</a>
                     <h1>Conciliacion Bancaria</h1>
-                    <span class="page-sub">Notificaciones de BCP, BBVA, Interbank, Yape, Plin</span>
+                    <span class="page-sub">BCP - BBVA - Interbank - Yape - Plin — verificacion DKIM</span>
                 </div>
-                <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap;align-items:center">
+                    {% if sospechosos_count > 0 %}
+                    <a href="#sospechosos" class="badge" style="background:rgba(255,68,68,0.15);color:var(--red);font-size:0.8rem;padding:0.4rem 0.85rem">
+                        {{ sospechosos_count }} correo(s) sospechoso(s)
+                    </a>
+                    {% endif %}
                     <select id="sel-dias" class="field-select" style="width:auto">
                         <option value="3">Ultimos 3 dias</option>
                         <option value="7" selected>Ultimos 7 dias</option>
@@ -25,121 +30,110 @@
                     <button class="btn-primary" onclick="cruzarPendientes()">
                         Cruzar pendientes
                     </button>
+                    <a href="/contabilidad/banco/dominios" class="btn-icon" title="Ver dominios verificados">DOM</a>
                 </div>
             </div>
+
+            <div id="resultado-msg" style="display:none;margin-bottom:1rem" class="alerta-nota-mercaderia"></div>
 
             <div class="kpi-grid" style="margin-bottom:1.5rem">
                 <div class="kpi-card">
                     <div class="kpi-icon kpi-orange">PEN</div>
-                    <div class="kpi-data">
-                        <span class="kpi-value">{{ pendientes }}</span>
-                        <span class="kpi-label">Pendientes</span>
-                    </div>
+                    <div class="kpi-data"><span class="kpi-value">{{ pendientes }}</span><span class="kpi-label">Pendientes</span></div>
                 </div>
                 <div class="kpi-card">
                     <div class="kpi-icon kpi-green">OK</div>
-                    <div class="kpi-data">
-                        <span class="kpi-value">{{ cruzados }}</span>
-                        <span class="kpi-label">Cruzados</span>
-                    </div>
+                    <div class="kpi-data"><span class="kpi-value">{{ cruzados }}</span><span class="kpi-label">Cruzados</span></div>
                 </div>
                 <div class="kpi-card">
-                    <div class="kpi-icon kpi-red">SIN</div>
-                    <div class="kpi-data">
-                        <span class="kpi-value">{{ sin_match }}</span>
-                        <span class="kpi-label">Sin match</span>
-                    </div>
+                    <div class="kpi-icon kpi-violet">?</div>
+                    <div class="kpi-data"><span class="kpi-value">{{ sin_match }}</span><span class="kpi-label">Sin match</span></div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-red">!</div>
+                    <div class="kpi-data"><span class="kpi-value">{{ sospechosos_count }}</span><span class="kpi-label">Sospechosos</span></div>
                 </div>
             </div>
 
-            <div id="resultado-msg" style="display:none" class="alerta-nota-mercaderia"></div>
-
-            <div class="table-wrap">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Fecha</th>
-                            <th>Banco</th>
-                            <th>Tipo</th>
-                            <th>Monto</th>
-                            <th>Remitente</th>
-                            <th>Referencia</th>
-                            <th>Estado</th>
-                            <th>Venta cruzada</th>
-                            <th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
+            <div class="form-section" style="margin-bottom:1.5rem">
+                <h3 class="section-title">Movimientos bancarios</h3>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Fecha</th><th>Banco</th><th>Tipo</th><th>Monto</th>
+                                <th>Remitente</th><th>Confianza</th><th>Estado</th><th>Venta</th><th></th></tr>
+                        </thead>
+                        <tbody>
                         {% for m in movimientos %}
                         <tr id="row-{{ m.id }}">
-                            <td>{{ m.fecha.strftime('%d/%m/%Y') }}
-                                {% if m.hora %}<span class="sub">{{ m.hora[:5] }}</span>{% endif %}
+                            <td>{{ m.fecha.strftime('%d/%m/%Y') }}{% if m.hora %}<br><span class="sub">{{ m.hora[:5] }}</span>{% endif %}</td>
+                            <td>
+                                {% if m.banco == 'yape' %}Yape
+                                {% elif m.banco == 'plin' %}Plin
+                                {% elif m.banco == 'bcp' %}BCP
+                                {% elif m.banco == 'bbva' %}BBVA
+                                {% elif m.banco == 'interbank' %}IBK
+                                {% elif m.banco == 'scotiabank' %}Scotia
+                                {% else %}{{ m.banco.upper() }}{% endif %}
+                            </td>
+                            <td>{% if m.tipo == 'abono' %}<span style="color:var(--green)">Abono</span>{% else %}<span style="color:var(--red)">Cargo</span>{% endif %}</td>
+                            <td><strong>S/ {{ "%.2f"|format(m.monto) }}</strong></td>
+                            <td>{% if m.nombre_contraparte %}<strong>{{ m.nombre_contraparte }}</strong>{% if m.celular_contraparte %}<br><span class="sub">{{ m.celular_contraparte }}</span>{% endif %}{% else %}&mdash;{% endif %}</td>
+                            <td>
+                                {% if m.confianza == 'alta' %}<span class="badge badge-ok">Alta</span>
+                                {% elif m.confianza == 'media' %}<span class="badge badge-warn">Media</span>
+                                {% else %}<span class="badge badge-off">Baja</span>{% endif %}
                             </td>
                             <td>
-                                <span class="badge badge-banco-{{ m.banco }}">
-                                    {% if m.banco == 'yape' %}Yape
-                                    {% elif m.banco == 'plin' %}Plin
-                                    {% elif m.banco == 'bcp' %}BCP
-                                    {% elif m.banco == 'bbva' %}BBVA
-                                    {% elif m.banco == 'interbank' %}IBK
-                                    {% else %}{{ m.banco.upper() }}{% endif %}
-                                </span>
+                                {% if m.estado_cruce == 'cruzado' %}<span class="badge badge-ok">Cruzado</span>
+                                {% elif m.estado_cruce == 'pendiente' %}<span class="badge badge-warn">Pendiente</span>
+                                {% elif m.estado_cruce == 'sin_match' %}<span class="badge badge-off">Sin match</span>
+                                {% elif m.estado_cruce == 'ignorado' %}<span class="badge" style="opacity:0.4">Ignorado</span>{% endif %}
                             </td>
-                            <td>
-                                {% if m.tipo == 'abono' %}
-                                <span style="color:var(--green)">Abono</span>
-                                {% else %}
-                                <span style="color:var(--red)">Cargo</span>
-                                {% endif %}
-                            </td>
-                            <td style="font-weight:700">
-                                S/ {{ "%.2f"|format(m.monto) }}
-                            </td>
-                            <td>
-                                {% if m.nombre_contraparte %}
-                                <strong>{{ m.nombre_contraparte }}</strong><br>
-                                {% endif %}
-                                {% if m.celular_contraparte %}
-                                <span class="sub">{{ m.celular_contraparte }}</span>
-                                {% endif %}
-                            </td>
-                            <td><span class="sub">{{ m.referencia or '&mdash;' }}</span></td>
-                            <td>
-                                {% if m.estado_cruce == 'cruzado' %}
-                                <span class="badge badge-ok">Cruzado</span>
-                                {% elif m.estado_cruce == 'pendiente' %}
-                                <span class="badge badge-warn">Pendiente</span>
-                                {% elif m.estado_cruce == 'sin_match' %}
-                                <span class="badge badge-off">Sin match</span>
-                                {% elif m.estado_cruce == 'ignorado' %}
-                                <span class="badge" style="opacity:0.5">Ignorado</span>
-                                {% endif %}
-                            </td>
-                            <td>
-                                {% if m.id_venta %}
-                                <a href="/ventas/pedidos/{{ m.id_venta }}"
-                                   class="btn-icon" style="font-size:0.8rem">
-                                    Ver venta &rarr;
-                                </a>
-                                {% else %}&mdash;{% endif %}
-                            </td>
-                            <td>
-                                {% if m.estado_cruce == 'pendiente' or m.estado_cruce == 'sin_match' %}
-                                <button class="btn-icon" onclick="ignorar({{ m.id }})"
-                                        title="Ignorar">&times;</button>
-                                {% endif %}
-                            </td>
+                            <td>{% if m.id_venta %}<a href="/ventas/pedidos/{{ m.id_venta }}" class="btn-icon">&rarr;</a>{% else %}&mdash;{% endif %}</td>
+                            <td>{% if m.estado_cruce in ('pendiente','sin_match') %}<button class="btn-icon" onclick="ignorar({{ m.id }})" title="Ignorar">&times;</button>{% endif %}</td>
                         </tr>
                         {% else %}
+                        <tr><td colspan="9" class="table-empty">Sin movimientos. Haz click en "Leer correos".</td></tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            {% if sospechosos %}
+            <div class="form-section" id="sospechosos" style="border-color:rgba(255,68,68,0.3)">
+                <h3 class="section-title" style="color:var(--red)">Correos sospechosos — requieren revision</h3>
+                <p style="font-size:0.85rem;color:var(--text2);margin-bottom:1rem">
+                    Estos correos parecen bancarios pero no pasaron DKIM o provienen de dominios desconocidos.
+                </p>
+                <div class="table-wrap">
+                    <table class="data-table">
+                        <thead>
+                            <tr><th>Fecha</th><th>De</th><th>Asunto</th><th>DKIM</th><th>Dominio</th><th>Razon</th><th></th></tr>
+                        </thead>
+                        <tbody>
+                        {% for s in sospechosos %}
                         <tr>
-                            <td colspan="9" class="table-empty">
-                                Sin movimientos. Haz click en "Leer correos" para importar.
+                            <td>{{ s.fecha_correo.strftime('%d/%m/%Y %H:%M') if s.fecha_correo else '&mdash;' }}</td>
+                            <td><span class="sub">{{ s.from_addr[:50] }}</span></td>
+                            <td>{{ s.asunto[:60] }}</td>
+                            <td><span class="badge {% if s.dkim_resultado == 'fail' %}badge-off{% else %}badge-warn{% endif %}">{{ s.dkim_resultado }}</span></td>
+                            <td><code style="font-size:0.75rem">{{ s.dominio_dkim or '&mdash;' }}</code></td>
+                            <td><span class="sub">{{ s.razon }}</span></td>
+                            <td>
+                                <button class="btn-secondary" style="font-size:0.75rem;padding:0.3rem 0.7rem"
+                                        onclick="revisarSospechoso({{ s.id }}, '{{ s.dominio_dkim }}')">
+                                    Revisar
+                                </button>
                             </td>
                         </tr>
                         {% endfor %}
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
             </div>
+            {% endif %}
         </main>
     </div>
 </div>
@@ -147,42 +141,60 @@
 <script>
 async function importarMovimientos() {
     const dias = document.getElementById('sel-dias').value;
-    mostrarMsg('Leyendo correos...', 'info');
+    mostrarMsg('Conectando al correo...', 'info');
     const r = await fetch('/contabilidad/banco/importar', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
         body: JSON.stringify({dias: parseInt(dias)}),
     });
-    const data = await r.json();
-    if (data.ok) {
+    const d = await r.json();
+    if (d.ok) {
         mostrarMsg(
-            `${data.nuevos} nuevos movimientos importados. ` +
-            `${data.duplicados} duplicados omitidos. ` +
-            `${data.cruzados_auto || 0} cruzados automaticamente.`,
-            'ok'
-        );
-        setTimeout(() => location.reload(), 2000);
+            `${d.nuevos} nuevos - ${d.duplicados} duplicados - ` +
+            `${d.sospechosos || 0} sospechosos - ${d.dominios_nuevos || 0} dominios nuevos - ` +
+            `${d.cruzados_auto || 0} cruzados automaticamente`, 'ok');
+        setTimeout(() => location.reload(), 2500);
     } else {
-        mostrarMsg('Error: ' + data.error, 'error');
+        mostrarMsg('Error: ' + d.error, 'error');
     }
 }
 
 async function cruzarPendientes() {
     mostrarMsg('Cruzando movimientos...', 'info');
     const r = await fetch('/contabilidad/banco/cruzar', {method: 'POST'});
-    const data = await r.json();
-    if (data.ok) {
-        mostrarMsg(
-            `${data.cruzados} cruzados. ${data.sin_match} sin match.`,
-            'ok'
-        );
+    const d = await r.json();
+    if (d.ok) {
+        mostrarMsg(`${d.cruzados} cruzados - ${d.sin_match} sin match`, 'ok');
         setTimeout(() => location.reload(), 1500);
     }
 }
 
 async function ignorar(id) {
     await fetch(`/contabilidad/banco/movimiento/${id}/ignorar`, {method: 'POST'});
-    document.getElementById(`row-${id}`).style.opacity = '0.4';
+    document.getElementById(`row-${id}`).style.opacity = '0.35';
+}
+
+function revisarSospechoso(id, dominio) {
+    const accion = prompt(
+        `Correo sospechoso -- dominio: ${dominio}\n\n` +
+        `Acciones:\n1 = ignorar\n2 = agregar_dominio (es legitimo)\n3 = reportar_phishing\n\n` +
+        `Ingresa 1, 2 o 3:`
+    );
+    const mapa = {'1':'ignorar','2':'agregar_dominio','3':'reportar_phishing'};
+    const accionStr = mapa[accion];
+    if (!accionStr) return;
+
+    let banco = '';
+    if (accionStr === 'agregar_dominio') {
+        banco = prompt('A que banco pertenece este dominio?\n(bcp/bbva/interbank/scotiabank/yape/plin)');
+        if (!banco) return;
+    }
+
+    fetch(`/contabilidad/banco/sospechoso/${id}/revisar`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({accion: accionStr, banco}),
+    }).then(() => location.reload());
 }
 
 function mostrarMsg(texto, tipo) {
@@ -192,6 +204,9 @@ function mostrarMsg(texto, tipo) {
     el.style.borderColor = tipo === 'ok' ? 'rgba(0,255,136,0.3)' :
                             tipo === 'error' ? 'rgba(255,68,68,0.3)' :
                             'rgba(0,212,255,0.3)';
+    el.style.background = tipo === 'ok' ? 'rgba(0,255,136,0.05)' :
+                           tipo === 'error' ? 'rgba(255,68,68,0.05)' :
+                           'rgba(0,212,255,0.05)';
 }
 </script>
 {% endblock %}
