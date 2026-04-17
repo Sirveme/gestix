@@ -30,20 +30,3 @@
 <div class="pos-empty">Sin resultados</div>
 {% endif %}
 
-<script>
-function seleccionarProducto(id, codigo, nombre, precio, id_precio, unidad, afecto_igv) {
-    const cantidad = parseFloat(prompt(`Cantidad de "${nombre}":`, '1') || '0');
-    if (!cantidad || cantidad <= 0) return;
-
-    agregarProducto({
-        id_producto: id,
-        id_precio: id_precio,
-        codigo_producto: codigo,
-        nombre_producto: nombre,
-        precio_unitario: precio,
-        cantidad: cantidad,
-        unidad: unidad,
-        afecto_igv: afecto_igv,
-    });
-}
-</script>
