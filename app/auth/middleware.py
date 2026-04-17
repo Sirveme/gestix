@@ -10,6 +10,10 @@ RUTAS_PUBLICAS_PREFIJOS = [
     "/ping",
     "/api/pixel",
     "/seleccionar-empresa/confirmar",
+    "/catalogo-publico",
+    "/mis-compras",
+    "/mis-compras-data",
+    "/ventas/caja/ws",
 ]
 
 
