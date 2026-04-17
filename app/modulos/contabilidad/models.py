@@ -492,3 +492,35 @@ class MovimientoBancario(Base):
         Index("ix_movbanco_fecha_banco", "fecha", "banco"),
         Index("ix_movbanco_estado", "estado_cruce"),
     )
+
+
+class ValidacionPago(Base):
+    """
+    Registro de cada validacion de pago Yape/Plin/Transferencia
+    realizada desde el POS mediante foto del comprobante del cliente.
+    """
+    __tablename__ = "cont_validaciones_pago"
+
+    id = Column(Integer, primary_key=True)
+
+    id_pedido = Column(Integer, nullable=True)
+    id_punto_venta = Column(Integer, nullable=True)
+    id_usuario = Column(Integer, nullable=True)
+
+    foto_url = Column(String(500), nullable=True)
+
+    numero_operacion_ocr = Column(String(50), nullable=True)
+    monto_ocr = Column(Numeric(14, 2), nullable=True)
+    banco_ocr = Column(String(50), nullable=True)
+    texto_ocr_completo = Column(Text, nullable=True)
+
+    estado = Column(String(20), default="pendiente")
+    # pendiente | confirmado | rechazado | no_encontrado | manual
+
+    id_movimiento_bancario = Column(Integer, nullable=True)
+    diferencia_monto = Column(Numeric(14, 2), nullable=True)
+    nota = Column(Text, nullable=True)
+
+    created_at = Column(DateTime, default=datetime.now)
+    confirmado_en = Column(DateTime, nullable=True)
+    tiempo_respuesta_seg = Column(Integer, nullable=True)
