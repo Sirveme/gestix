@@ -6,25 +6,41 @@
     <div class="app-main">
         {% include "partials/topbar.html" %}
         <main class="main-content">
-            <div class="page-header">
-                <a href="/contabilidad/" class="page-back">&larr; Contabilidad</a>
-                <h1>Conciliacion Bancaria</h1>
-                <span class="page-sub">Notificaciones bancarias vs movimientos Gestix</span>
+            <div class="page-header" style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem">
+                <div>
+                    <a href="/contabilidad/" class="page-back">&larr; Contabilidad</a>
+                    <h1>Conciliacion Bancaria</h1>
+                    <span class="page-sub">Notificaciones de BCP, BBVA, Interbank, Yape, Plin</span>
+                </div>
+                <div style="display:flex;gap:0.75rem;flex-wrap:wrap">
+                    <select id="sel-dias" class="field-select" style="width:auto">
+                        <option value="3">Ultimos 3 dias</option>
+                        <option value="7" selected>Ultimos 7 dias</option>
+                        <option value="15">Ultimos 15 dias</option>
+                        <option value="30">Ultimos 30 dias</option>
+                    </select>
+                    <button class="btn-secondary" onclick="importarMovimientos()">
+                        Leer correos
+                    </button>
+                    <button class="btn-primary" onclick="cruzarPendientes()">
+                        Cruzar pendientes
+                    </button>
+                </div>
             </div>
 
-            <div class="kpi-grid" style="margin-bottom:1.25rem">
-                <div class="kpi-card">
-                    <div class="kpi-icon kpi-cyan">TOT</div>
-                    <div class="kpi-data">
-                        <span class="kpi-value">{{ movimientos|length }}</span>
-                        <span class="kpi-label">Movimientos</span>
-                    </div>
-                </div>
+            <div class="kpi-grid" style="margin-bottom:1.5rem">
                 <div class="kpi-card">
                     <div class="kpi-icon kpi-orange">PEN</div>
                     <div class="kpi-data">
                         <span class="kpi-value">{{ pendientes }}</span>
-                        <span class="kpi-label">Pendientes de cruce</span>
+                        <span class="kpi-label">Pendientes</span>
+                    </div>
+                </div>
+                <div class="kpi-card">
+                    <div class="kpi-icon kpi-green">OK</div>
+                    <div class="kpi-data">
+                        <span class="kpi-value">{{ cruzados }}</span>
+                        <span class="kpi-label">Cruzados</span>
                     </div>
                 </div>
                 <div class="kpi-card">
@@ -36,6 +52,8 @@
                 </div>
             </div>
 
+            <div id="resultado-msg" style="display:none" class="alerta-nota-mercaderia"></div>
+
             <div class="table-wrap">
                 <table class="data-table">
                     <thead>
@@ -43,41 +61,81 @@
                             <th>Fecha</th>
                             <th>Banco</th>
                             <th>Tipo</th>
-                            <th>Descripcion</th>
-                            <th style="text-align:right">Monto</th>
+                            <th>Monto</th>
+                            <th>Remitente</th>
+                            <th>Referencia</th>
                             <th>Estado</th>
+                            <th>Venta cruzada</th>
+                            <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for m in movimientos %}
-                        <tr>
-                            <td>{{ m.fecha.strftime('%d/%m/%Y') }}</td>
-                            <td>{{ m.banco }}</td>
+                        <tr id="row-{{ m.id }}">
+                            <td>{{ m.fecha.strftime('%d/%m/%Y') }}
+                                {% if m.hora %}<span class="sub">{{ m.hora[:5] }}</span>{% endif %}
+                            </td>
+                            <td>
+                                <span class="badge badge-banco-{{ m.banco }}">
+                                    {% if m.banco == 'yape' %}Yape
+                                    {% elif m.banco == 'plin' %}Plin
+                                    {% elif m.banco == 'bcp' %}BCP
+                                    {% elif m.banco == 'bbva' %}BBVA
+                                    {% elif m.banco == 'interbank' %}IBK
+                                    {% else %}{{ m.banco.upper() }}{% endif %}
+                                </span>
+                            </td>
                             <td>
                                 {% if m.tipo == 'abono' %}
-                                <span class="badge badge-ok">Abono</span>
+                                <span style="color:var(--green)">Abono</span>
                                 {% else %}
-                                <span class="badge badge-warn">Cargo</span>
+                                <span style="color:var(--red)">Cargo</span>
                                 {% endif %}
                             </td>
-                            <td>{{ m.descripcion or '' }}</td>
-                            <td style="text-align:right;font-weight:600">
-                                {{ m.moneda }} {{ "%.2f"|format(m.monto) }}
+                            <td style="font-weight:700">
+                                S/ {{ "%.2f"|format(m.monto) }}
                             </td>
+                            <td>
+                                {% if m.nombre_contraparte %}
+                                <strong>{{ m.nombre_contraparte }}</strong><br>
+                                {% endif %}
+                                {% if m.celular_contraparte %}
+                                <span class="sub">{{ m.celular_contraparte }}</span>
+                                {% endif %}
+                            </td>
+                            <td><span class="sub">{{ m.referencia or '&mdash;' }}</span></td>
                             <td>
                                 {% if m.estado_cruce == 'cruzado' %}
                                 <span class="badge badge-ok">Cruzado</span>
+                                {% elif m.estado_cruce == 'pendiente' %}
+                                <span class="badge badge-warn">Pendiente</span>
                                 {% elif m.estado_cruce == 'sin_match' %}
-                                <span class="badge" style="background:rgba(255,68,68,0.15);color:var(--red)">Sin match</span>
+                                <span class="badge badge-off">Sin match</span>
                                 {% elif m.estado_cruce == 'ignorado' %}
-                                <span class="badge badge-off">Ignorado</span>
-                                {% else %}
-                                <span class="badge badge-off">Pendiente</span>
+                                <span class="badge" style="opacity:0.5">Ignorado</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if m.id_venta %}
+                                <a href="/ventas/pedidos/{{ m.id_venta }}"
+                                   class="btn-icon" style="font-size:0.8rem">
+                                    Ver venta &rarr;
+                                </a>
+                                {% else %}&mdash;{% endif %}
+                            </td>
+                            <td>
+                                {% if m.estado_cruce == 'pendiente' or m.estado_cruce == 'sin_match' %}
+                                <button class="btn-icon" onclick="ignorar({{ m.id }})"
+                                        title="Ignorar">&times;</button>
                                 {% endif %}
                             </td>
                         </tr>
                         {% else %}
-                        <tr><td colspan="6" class="table-empty">Sin movimientos bancarios importados</td></tr>
+                        <tr>
+                            <td colspan="9" class="table-empty">
+                                Sin movimientos. Haz click en "Leer correos" para importar.
+                            </td>
+                        </tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -85,4 +143,55 @@
         </main>
     </div>
 </div>
+
+<script>
+async function importarMovimientos() {
+    const dias = document.getElementById('sel-dias').value;
+    mostrarMsg('Leyendo correos...', 'info');
+    const r = await fetch('/contabilidad/banco/importar', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({dias: parseInt(dias)}),
+    });
+    const data = await r.json();
+    if (data.ok) {
+        mostrarMsg(
+            `${data.nuevos} nuevos movimientos importados. ` +
+            `${data.duplicados} duplicados omitidos. ` +
+            `${data.cruzados_auto || 0} cruzados automaticamente.`,
+            'ok'
+        );
+        setTimeout(() => location.reload(), 2000);
+    } else {
+        mostrarMsg('Error: ' + data.error, 'error');
+    }
+}
+
+async function cruzarPendientes() {
+    mostrarMsg('Cruzando movimientos...', 'info');
+    const r = await fetch('/contabilidad/banco/cruzar', {method: 'POST'});
+    const data = await r.json();
+    if (data.ok) {
+        mostrarMsg(
+            `${data.cruzados} cruzados. ${data.sin_match} sin match.`,
+            'ok'
+        );
+        setTimeout(() => location.reload(), 1500);
+    }
+}
+
+async function ignorar(id) {
+    await fetch(`/contabilidad/banco/movimiento/${id}/ignorar`, {method: 'POST'});
+    document.getElementById(`row-${id}`).style.opacity = '0.4';
+}
+
+function mostrarMsg(texto, tipo) {
+    const el = document.getElementById('resultado-msg');
+    el.textContent = texto;
+    el.style.display = 'block';
+    el.style.borderColor = tipo === 'ok' ? 'rgba(0,255,136,0.3)' :
+                            tipo === 'error' ? 'rgba(255,68,68,0.3)' :
+                            'rgba(0,212,255,0.3)';
+}
+</script>
 {% endblock %}
