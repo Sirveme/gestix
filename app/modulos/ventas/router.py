@@ -206,6 +206,9 @@ async def pos_buscar_productos(
     from sqlalchemy import or_
     from app.modulos.catalogo.models import ProductoBarra
 
+    schema = getattr(request.state, "tenant_schema", "NO_SCHEMA")
+    print(f"[POS BUSCAR] schema={schema}, q={q}")
+
     if not q and not clas1:
         return HTMLResponse("")
 
@@ -233,6 +236,7 @@ async def pos_buscar_productos(
 
     result = await db.execute(query.limit(50))
     rows = result.all()
+    print(f"[POS BUSCAR] encontrados={len(rows)}")
 
     productos_data = {}
     for prod, precio in rows:
