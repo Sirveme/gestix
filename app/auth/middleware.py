@@ -38,6 +38,8 @@ async def auth_middleware(request: Request, call_next):
     request.state.empresa_id = payload.get("empresa_id")
     request.state.es_contador = payload.get("es_contador", False)
     request.state.empresas = payload.get("empresas", [])
+    request.state.empresas_usuario = payload.get("empresas", [])
+    request.state.empresa_id_actual = payload.get("empresa_id")
     request.state.permisos = set(payload.get("permisos", []))
 
     # Si está autenticado pero no ha seleccionado empresa → selector

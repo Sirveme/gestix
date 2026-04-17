@@ -150,6 +150,55 @@ async def confirmar_empresa(request: Request, empresa_id: int):
     return response
 
 
+@router.post("/seleccionar-empresa/confirmar")
+async def confirmar_empresa_post(request: Request, empresa_id: int = Form(...)):
+    token = request.cookies.get("session_token")
+    if not token:
+        return RedirectResponse(url="/login", status_code=302)
+    from app.auth.utils import decodificar_token, crear_token
+    payload = decodificar_token(token)
+    if not payload:
+        return RedirectResponse(url="/login", status_code=302)
+
+    empresas = payload.get("empresas", [])
+    empresa = next((e for e in empresas if e["id"] == empresa_id), None)
+    if not empresa:
+        return RedirectResponse(url="/seleccionar-empresa", status_code=302)
+
+    schema = empresa["schema_db"]
+    permisos = []
+
+    try:
+        async with AsyncSessionLocal() as db:
+            await db.execute(text(f'SET search_path TO "{schema}", public'))
+            permisos = ["sistema.acceso_total"]
+    except Exception:
+        permisos = ["sistema.acceso_total"]
+
+    nuevo_token = crear_token({
+        "sub": payload["sub"],
+        "nombre": payload["nombre"],
+        "es_superadmin": payload.get("es_superadmin", False),
+        "empresa_id": empresa["id"],
+        "empresa_nombre": empresa.get("nombre_comercial") or empresa["razon_social"],
+        "schema": schema,
+        "empresas": empresas,
+        "permisos": permisos,
+    })
+
+    referer = request.headers.get("referer", "")
+    destino = "/dashboard"
+    if referer and "/seleccionar-empresa" not in referer and "/login" not in referer:
+        destino = referer
+
+    response = RedirectResponse(url=destino, status_code=302)
+    response.set_cookie(
+        key="session_token", value=nuevo_token,
+        httponly=True, max_age=3600 * 8, samesite="lax"
+    )
+    return response
+
+
 @router.get("/logout")
 async def logout():
     response = RedirectResponse(url="/", status_code=302)
