@@ -356,3 +356,84 @@ class HallazgoDiagnostico(Base):
 
     diagnostico = relationship("DiagnosticoEmpresa",
                               back_populates="hallazgos")
+
+
+# -----------------------------------------
+# CAPA 2: CUENTAS BANCARIAS
+# -----------------------------------------
+
+class CuentaBancaria(Base):
+    """Cuentas bancarias de la empresa."""
+    __tablename__ = "cont_cuentas_bancarias"
+
+    id = Column(Integer, primary_key=True)
+    banco = Column(String(50), nullable=False)
+    numero_cuenta = Column(String(30))
+    nombre_cuenta = Column(String(200))
+    moneda = Column(String(3), default="PEN")
+    tipo = Column(String(20), default="corriente")
+
+    email_notif = Column(String(100))
+
+    saldo_actual = Column(Numeric(16, 2), default=0)
+    saldo_fecha = Column(Date, nullable=True)
+
+    activo = Column(Boolean, default=True)
+    created_at = Column(DateTime, default=datetime.now)
+
+    movimientos = relationship("MovimientoBancario",
+                               back_populates="cuenta",
+                               cascade="all, delete-orphan")
+
+
+class MovimientoBancario(Base):
+    """
+    Movimiento bancario extraido de notificacion por correo.
+    Se cruza con ventas y compras de Gestix.
+    """
+    __tablename__ = "cont_movimientos_bancarios"
+
+    id = Column(Integer, primary_key=True)
+    id_cuenta = Column(Integer,
+        ForeignKey("cont_cuentas_bancarias.id"), nullable=True)
+
+    banco = Column(String(50), index=True)
+    fecha = Column(Date, nullable=False, index=True)
+    hora = Column(String(8), nullable=True)
+    tipo = Column(String(10), nullable=False)
+
+    monto = Column(Numeric(14, 2), nullable=False)
+    moneda = Column(String(3), default="PEN")
+    descripcion = Column(String(500))
+    referencia = Column(String(100))
+    numero_operacion = Column(String(50))
+    saldo_posterior = Column(Numeric(14, 2), nullable=True)
+
+    tipo_operacion = Column(String(20))
+
+    nombre_contraparte = Column(String(200))
+    celular_contraparte = Column(String(15))
+
+    origen = Column(String(20), default="email")
+    email_mensaje_id = Column(String(200))
+    email_asunto = Column(String(300))
+    email_fecha = Column(DateTime)
+
+    estado_cruce = Column(String(20), default="pendiente")
+
+    id_venta = Column(Integer, nullable=True)
+    id_compra = Column(Integer, nullable=True)
+    diferencia_monto = Column(Numeric(14, 2), nullable=True)
+    nota_cruce = Column(Text, nullable=True)
+
+    cruzado_en = Column(DateTime, nullable=True)
+    id_usuario_cruzo = Column(Integer, nullable=True)
+
+    importado_en = Column(DateTime, default=datetime.now)
+
+    cuenta = relationship("CuentaBancaria", back_populates="movimientos")
+
+    __table_args__ = (
+        Index("ix_movbanco_fecha_banco", "fecha", "banco"),
+        Index("ix_movbanco_estado", "estado_cruce"),
+    )

@@ -9,7 +9,7 @@ from app.tenant import get_tenant_session
 from app.modulos.contabilidad.models import (
     CuentaContable, AsientoContable, PartidaContable,
     ConfigContable, LibroElectronico, RegistroSIRE,
-    NotificacionBancaria, DeclaracionTributaria,
+    MovimientoBancario, DeclaracionTributaria,
     DiagnosticoEmpresa, HallazgoDiagnostico,
 )
 from app.modulos.contabilidad.service import (
@@ -274,15 +274,67 @@ async def cont_banco(
     db: AsyncSession = Depends(get_tenant_session),
 ):
     result = await db.execute(
-        select(NotificacionBancaria).order_by(
-            NotificacionBancaria.fecha.desc()).limit(100))
+        select(MovimientoBancario).order_by(
+            MovimientoBancario.fecha.desc()
+        ).limit(100)
+    )
     movimientos = result.scalars().all()
 
-    pendientes = [m for m in movimientos if m.estado_cruce == "pendiente"]
-    sin_match = [m for m in movimientos if m.estado_cruce == "sin_match"]
+    pendientes = sum(1 for m in movimientos if m.estado_cruce == "pendiente")
+    cruzados = sum(1 for m in movimientos if m.estado_cruce == "cruzado")
+    sin_match = sum(1 for m in movimientos if m.estado_cruce == "sin_match")
 
     return templates.TemplateResponse("contabilidad/banco.html", ctx(request,
         movimientos=movimientos,
-        pendientes=len(pendientes),
-        sin_match=len(sin_match),
+        pendientes=pendientes,
+        cruzados=cruzados,
+        sin_match=sin_match,
     ))
+
+
+@router.post("/banco/importar")
+async def cont_banco_importar(
+    request: Request,
+    db: AsyncSession = Depends(get_tenant_session),
+):
+    """Lee correos del IMAP e importa movimientos nuevos."""
+    from app.modulos.contabilidad.imap_service import importar_movimientos_bancarios
+    from app.modulos.contabilidad.cruce_service import cruzar_pendientes
+    try:
+        data = await request.json()
+        dias = int(data.get("dias", 7))
+        resultado = await importar_movimientos_bancarios(db, dias_atras=dias)
+        if resultado["nuevos"] > 0:
+            cruce = await cruzar_pendientes(db)
+            resultado["cruzados_auto"] = cruce["cruzados"]
+        return JSONResponse({"ok": True, **resultado})
+    except ConnectionError as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+    except Exception as e:
+        return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+
+
+@router.post("/banco/cruzar")
+async def cont_banco_cruzar(
+    request: Request,
+    db: AsyncSession = Depends(get_tenant_session),
+):
+    """Cruza manualmente todos los movimientos pendientes."""
+    from app.modulos.contabilidad.cruce_service import cruzar_pendientes
+    resultado = await cruzar_pendientes(db)
+    return JSONResponse({"ok": True, **resultado})
+
+
+@router.post("/banco/movimiento/{id}/ignorar")
+async def cont_banco_ignorar(
+    request: Request, id: int,
+    db: AsyncSession = Depends(get_tenant_session),
+):
+    """Marca un movimiento como ignorado."""
+    result = await db.execute(
+        select(MovimientoBancario).where(MovimientoBancario.id == id))
+    mov = result.scalar_one_or_none()
+    if mov:
+        mov.estado_cruce = "ignorado"
+        await db.commit()
+    return JSONResponse({"ok": True})
