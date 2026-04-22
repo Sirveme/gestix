@@ -19,6 +19,7 @@ from app.modulos.auth.router import router as auth_op_router
 from app.modulos.compras.router import router as compras_router
 from app.modulos.inventario.router import router as inventario_router
 from app.modulos.contabilidad.router import router as contabilidad_router
+from app.modulos.pagook.router import router as pagook_router
 
 # Importar todos los modelos para create_all
 from app.core import models as core_models                      # noqa
@@ -33,6 +34,7 @@ from app.modulos.rrhh import models as rrhh_models              # noqa
 from app.modulos.ventas import models as ventas_models          # noqa
 from app.modulos.inventario import models as inventario_models  # noqa
 from app.modulos.contabilidad import models as contabilidad_models  # noqa
+from app.modulos.pagook import models as pagook_models              # noqa
 
 templates = Jinja2Templates(directory="templates")
 
@@ -66,6 +68,7 @@ app.include_router(auth_op_router)
 app.include_router(compras_router)
 app.include_router(inventario_router)
 app.include_router(contabilidad_router)
+app.include_router(pagook_router)
 
 
 @app.get("/", response_class=FileResponse)
